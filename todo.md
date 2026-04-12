@@ -42,3 +42,12 @@
 - [x] Criar arquivo eas.json para configurar assinatura consistente dos APKs
 - [ ] Gerar novo APK 1.0.7 com configuração de assinatura corrigida
 - [ ] Testar instalação do novo APK sobre versões anteriores
+
+
+## v1.0.10 - Assinatura Legítima e Compatibilidade Total
+
+- [x] Atualizar versão para 1.0.10 no app.config.ts
+- [x] Garantir que eas.json força assinatura consistente (sem burlar verificações DEX)
+- [x] Validar que bundle ID permanece igual para compatibilidade com versões anteriores
+- [x] Gerar APK 1.0.10 com assinatura legítima via Publish
+- [x] Testar instalação sobre versão 1.0.9 - deve instalar como atualização sem conflitos

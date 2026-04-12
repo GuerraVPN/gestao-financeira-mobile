@@ -2,17 +2,20 @@
   "build": {
     "preview": {
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "distribution": "internal"
       }
     },
     "preview2": {
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "distribution": "internal"
       }
     },
     "production": {
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "distribution": "store"
       }
     }
   },
