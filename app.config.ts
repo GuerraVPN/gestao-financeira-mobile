@@ -32,7 +32,7 @@ const env = {
   appSlug: "gestao-financeira-mobile",
   // S3 URL of the app logo - set this to the URL returned by generate_image when creating custom logo
   // Leave empty to use the default icon from assets/images/icon.png
-  logoUrl: "",
+  logoUrl: "https://d2xsxph8kpxj0f.cloudfront.net/310519663544620381/ecpny2LnHpX9ugp4v9hDvs/meu-financeiro-icon-E6QXrJsu4UNvaXTCSipTpy.png",
   scheme: schemeFromBundleId,
   iosBundleId: bundleId,
   androidPackage: bundleId,
