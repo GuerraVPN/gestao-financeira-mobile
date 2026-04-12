@@ -122,6 +122,8 @@ interface FinanceContextValue {
   removeAccount: (accountId: string) => void;
   editCard: (cardId: string, input: Partial<Omit<FinanceCard, "id">>) => void;
   removeCard: (cardId: string) => void;
+  editReminder: (reminderId: string, input: Partial<Omit<FinanceReminder, "id">>) => void;
+  removeReminder: (reminderId: string) => void;
   getCategoryById: (categoryId: string) => FinanceCategory | undefined;
   getBudgetSpent: (budget: FinanceBudget) => number;
   getCurrencySymbol: () => string;
@@ -592,6 +594,30 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }));
   };
 
+  const editReminder = (reminderId: string, input: Partial<Omit<FinanceReminder, "id">>) => {
+    setState((current) => ({
+      ...current,
+      reminders: current.reminders.map((reminder) =>
+        reminder.id === reminderId
+          ? {
+              ...reminder,
+              title: input.title?.trim() || reminder.title,
+              amount: input.amount && input.amount > 0 ? Number(input.amount) : reminder.amount,
+              dueDate: input.dueDate || reminder.dueDate,
+              paid: input.paid !== undefined ? input.paid : reminder.paid,
+            }
+          : reminder,
+      ),
+    }));
+  };
+
+  const removeReminder = (reminderId: string) => {
+    setState((current) => ({
+      ...current,
+      reminders: current.reminders.filter((reminder) => reminder.id !== reminderId),
+    }));
+  };
+
   const currentMonthTransactions = useMemo(
     () => state.transactions.filter((transaction) => transaction.date.startsWith(monthKey())),
     [state.transactions],
@@ -693,6 +719,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       removeCard,
       addReminder,
       toggleReminderPaid,
+      editReminder,
+      removeReminder,
       updateSettings,
       getCategoryById,
       getBudgetSpent,

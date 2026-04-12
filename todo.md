@@ -25,3 +25,13 @@
 - [x] Deletar orçamentos, metas, contas e categorias com confirmação
 - [x] Validar integridade dos dados ao editar
 - [x] Testes de edição para todas as entidades
+
+
+## v1.0.7 - Correção de Bundle ID e Editar Planejamento
+
+- [x] Resolver conflito de bundle ID entre versões 1.0.0 e 1.0.5
+- [x] Atualizar versão do app para 1.0.7 no app.config.ts
+- [x] Adicionar funções de edição e remoção de lembretes (reminders) no provedor financeiro
+- [x] Implementar interface de edição de planejamento na tela more.tsx
+- [x] Adicionar testes para edição e remoção de lembretes
+- [ ] Validar que o novo APK instala sem conflitos

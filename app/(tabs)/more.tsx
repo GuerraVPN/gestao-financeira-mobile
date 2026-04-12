@@ -9,7 +9,7 @@ const categoryPalette = ["#2F6BFF", "#8B5CF6", "#16A34A", "#F59E0B", "#EF4444", 
 const categoryIcons = ["payments", "restaurant", "home", "directions-car", "health-and-safety", "celebration"];
 
 export default function MoreScreen() {
-  const { state, addCategory, editCategory, removeCategory, addAccount, editAccount, removeAccount, addCard, editCard, removeCard, addReminder, toggleReminderPaid, updateSettings, formatCurrency } = useFinance();
+  const { state, addCategory, editCategory, removeCategory, addAccount, editAccount, removeAccount, addCard, editCard, removeCard, addReminder, editReminder, removeReminder, toggleReminderPaid, updateSettings, formatCurrency } = useFinance();
 
   const [categoryName, setCategoryName] = useState("");
   const [categoryType, setCategoryType] = useState<FinanceCategory["type"]>("expense");
@@ -30,6 +30,7 @@ export default function MoreScreen() {
   const [reminderTitle, setReminderTitle] = useState("");
   const [reminderAmount, setReminderAmount] = useState("");
   const [reminderDate, setReminderDate] = useState(new Date().toISOString().slice(0, 10));
+  const [editingReminderId, setEditingReminderId] = useState<string | null>(null);
 
   const settingsOptions = useMemo(
     () => [
@@ -148,9 +149,30 @@ export default function MoreScreen() {
   const handleReminderSave = () => {
     const parsedAmount = Number(reminderAmount.replace(",", "."));
     if (!reminderTitle.trim() || !parsedAmount) return;
-    addReminder({ title: reminderTitle, amount: parsedAmount, dueDate: reminderDate });
+    if (editingReminderId) {
+      editReminder(editingReminderId, { title: reminderTitle, amount: parsedAmount, dueDate: reminderDate });
+      setEditingReminderId(null);
+    } else {
+      addReminder({ title: reminderTitle, amount: parsedAmount, dueDate: reminderDate });
+    }
     setReminderTitle("");
     setReminderAmount("");
+  };
+
+  const handleReminderEdit = (reminder: typeof state.reminders[0]) => {
+    setReminderTitle(reminder.title);
+    setReminderAmount(reminder.amount.toString());
+    setReminderDate(reminder.dueDate);
+    setEditingReminderId(reminder.id);
+  };
+
+  const handleReminderDelete = (reminderId: string) => {
+    removeReminder(reminderId);
+    if (editingReminderId === reminderId) {
+      setEditingReminderId(null);
+      setReminderTitle("");
+      setReminderAmount("");
+    }
   };
 
   const handleCurrencyChange = (currency: FinanceSettings["currency"]) => {
@@ -296,7 +318,7 @@ export default function MoreScreen() {
               <FieldLabel>Vencimento</FieldLabel>
               <InputField value={reminderDate} onChangeText={setReminderDate} placeholder="AAAA-MM-DD" autoCapitalize="none" returnKeyType="done" />
             </View>
-            <PrimaryButton label="Salvar lembrete" onPress={handleReminderSave} tone="secondary" />
+            <PrimaryButton label={editingReminderId ? "Atualizar lembrete" : "Salvar lembrete"} onPress={handleReminderSave} tone="secondary" />
             <View className="gap-3">
               {state.reminders.map((reminder) => (
                 <View key={reminder.id} className="rounded-[22px] bg-background px-4 py-4">
@@ -305,13 +327,21 @@ export default function MoreScreen() {
                       <Text className="text-sm font-semibold text-foreground">{reminder.title}</Text>
                       <Text className="text-xs text-muted">Vencimento em {reminder.dueDate}</Text>
                     </View>
-                    <Pressable onPress={() => toggleReminderPaid(reminder.id)} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
-                      <Text className={`text-xs font-semibold ${reminder.paid ? "text-success" : "text-primary"}`}>
-                        {reminder.paid ? "Pago" : "Marcar pago"}
-                      </Text>
-                    </Pressable>
+                    <View className="flex-row gap-1">
+                      <Pressable onPress={() => toggleReminderPaid(reminder.id)} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+                        <Text className={`text-xs font-semibold ${reminder.paid ? "text-success" : "text-primary"}`}>
+                          {reminder.paid ? "Pago" : "Marcar"}
+                        </Text>
+                      </Pressable>
+                    </View>
                   </View>
-                  <Text className="mt-2 text-sm font-semibold text-foreground">{formatCurrency(reminder.amount)}</Text>
+                  <View className="mt-2 flex-row items-center justify-between">
+                    <Text className="text-sm font-semibold text-foreground">{formatCurrency(reminder.amount)}</Text>
+                    <View className="flex-row gap-1">
+                      <PrimaryButton label="Editar" onPress={() => handleReminderEdit(reminder)} />
+                      <PrimaryButton label="Deletar" onPress={() => handleReminderDelete(reminder.id)} tone="secondary" />
+                    </View>
+                  </View>
                 </View>
               ))}
             </View>

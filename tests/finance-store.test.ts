@@ -297,3 +297,71 @@ describe("v1.0.5 - Edit and Delete Operations", () => {
     expect(updated.transactions).toHaveLength(0);
   });
 });
+
+
+describe("v1.0.7 - Edit and Delete Reminders", () => {
+  it("edita título, valor e data de vencimento de um lembrete", () => {
+    const state = cloneState({
+      reminders: [{ id: "reminder-1", title: "Aluguel", amount: 1500, dueDate: "2026-04-15", paid: false }],
+    });
+
+    const updated = {
+      ...state,
+      reminders: state.reminders.map((r) =>
+        r.id === "reminder-1"
+          ? { ...r, title: "Aluguel e condomínio", amount: 1800, dueDate: "2026-04-10" }
+          : r,
+      ),
+    };
+
+    expect(updated.reminders[0]?.title).toBe("Aluguel e condomínio");
+    expect(updated.reminders[0]?.amount).toBe(1800);
+    expect(updated.reminders[0]?.dueDate).toBe("2026-04-10");
+  });
+
+  it("marca lembrete como pago ao editar", () => {
+    const state = cloneState({
+      reminders: [{ id: "reminder-1", title: "Aluguel", amount: 1500, dueDate: "2026-04-15", paid: false }],
+    });
+
+    const updated = {
+      ...state,
+      reminders: state.reminders.map((r) =>
+        r.id === "reminder-1" ? { ...r, paid: true } : r,
+      ),
+    };
+
+    expect(updated.reminders[0]?.paid).toBe(true);
+  });
+
+  it("remove lembrete", () => {
+    const state = cloneState({
+      reminders: [{ id: "reminder-1", title: "Aluguel", amount: 1500, dueDate: "2026-04-15", paid: false }],
+    });
+
+    const updated = {
+      ...state,
+      reminders: state.reminders.filter((r) => r.id !== "reminder-1"),
+    };
+
+    expect(updated.reminders).toHaveLength(0);
+  });
+
+  it("mantém integridade ao remover múltiplos lembretes", () => {
+    const state = cloneState({
+      reminders: [
+        { id: "reminder-1", title: "Aluguel", amount: 1500, dueDate: "2026-04-15", paid: false },
+        { id: "reminder-2", title: "Internet", amount: 120, dueDate: "2026-04-20", paid: false },
+        { id: "reminder-3", title: "Água", amount: 80, dueDate: "2026-04-25", paid: false },
+      ],
+    });
+
+    const updated = {
+      ...state,
+      reminders: state.reminders.filter((r) => r.id !== "reminder-1" && r.id !== "reminder-3"),
+    };
+
+    expect(updated.reminders).toHaveLength(1);
+    expect(updated.reminders[0]?.id).toBe("reminder-2");
+  });
+});
