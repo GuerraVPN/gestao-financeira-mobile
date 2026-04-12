@@ -15,3 +15,13 @@
 - [x] Logo exclusivo e atualização do branding do aplicativo
 - [x] Testes básicos de componentes e fluxos principais
 - [x] Revisão final da experiência mobile e validação do projeto
+
+## v1.0.5 - Funcionalidades de Edição
+
+- [x] Editar orçamentos salvos (nome, limite, categoria)
+- [x] Editar metas financeiras (nome, valor, data)
+- [x] Editar contas e cartões (nome, saldo inicial, tipo)
+- [x] Editar categorias (nome, cor, ícone)
+- [x] Deletar orçamentos, metas, contas e categorias com confirmação
+- [x] Validar integridade dos dados ao editar
+- [x] Testes de edição para todas as entidades

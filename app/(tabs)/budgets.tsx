@@ -6,7 +6,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { useFinance } from "@/lib/finance-store";
 
 export default function BudgetsScreen() {
-  const { state, addBudget, addGoal, getBudgetSpent, getCategoryById, formatCurrency } = useFinance();
+  const { state, addBudget, addGoal, editBudget, removeBudget, editGoal, removeGoal, getBudgetSpent, getCategoryById, formatCurrency } = useFinance();
   const expenseCategories = useMemo(() => state.categories.filter((category) => category.type === "expense"), [state.categories]);
 
   const [budgetCategoryId, setBudgetCategoryId] = useState(expenseCategories[0]?.id ?? "");
@@ -15,27 +15,76 @@ export default function BudgetsScreen() {
   const [goalTarget, setGoalTarget] = useState("");
   const [goalCurrent, setGoalCurrent] = useState("");
   const [goalDeadline, setGoalDeadline] = useState(new Date().toISOString().slice(0, 10));
+  const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
+  const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
 
   const handleBudgetSave = () => {
     const parsedAmount = Number(budgetAmount.replace(",", "."));
     if (!parsedAmount || !budgetCategoryId) return;
-    addBudget({ categoryId: budgetCategoryId, amount: parsedAmount });
+    if (editingBudgetId) {
+      editBudget(editingBudgetId, { categoryId: budgetCategoryId, amount: parsedAmount });
+      setEditingBudgetId(null);
+    } else {
+      addBudget({ categoryId: budgetCategoryId, amount: parsedAmount });
+    }
     setBudgetAmount("");
+  };
+
+  const handleBudgetEdit = (budget: typeof state.budgets[0]) => {
+    setBudgetCategoryId(budget.categoryId);
+    setBudgetAmount(budget.amount.toString());
+    setEditingBudgetId(budget.id);
+  };
+
+  const handleBudgetDelete = (budgetId: string) => {
+    removeBudget(budgetId);
+    if (editingBudgetId === budgetId) {
+      setEditingBudgetId(null);
+      setBudgetAmount("");
+    }
   };
 
   const handleGoalSave = () => {
     const parsedTarget = Number(goalTarget.replace(",", "."));
     const parsedCurrent = Number(goalCurrent.replace(",", ".")) || 0;
     if (!parsedTarget || !goalName.trim()) return;
-    addGoal({
-      name: goalName,
-      targetAmount: parsedTarget,
-      currentAmount: parsedCurrent,
-      deadline: goalDeadline,
-    });
+    if (editingGoalId) {
+      editGoal(editingGoalId, {
+        name: goalName,
+        targetAmount: parsedTarget,
+        currentAmount: parsedCurrent,
+        deadline: goalDeadline,
+      });
+      setEditingGoalId(null);
+    } else {
+      addGoal({
+        name: goalName,
+        targetAmount: parsedTarget,
+        currentAmount: parsedCurrent,
+        deadline: goalDeadline,
+      });
+    }
     setGoalName("");
     setGoalTarget("");
     setGoalCurrent("");
+  };
+
+  const handleGoalEdit = (goal: typeof state.goals[0]) => {
+    setGoalName(goal.name);
+    setGoalTarget(goal.targetAmount.toString());
+    setGoalCurrent(goal.currentAmount.toString());
+    setGoalDeadline(goal.deadline);
+    setEditingGoalId(goal.id);
+  };
+
+  const handleGoalDelete = (goalId: string) => {
+    removeGoal(goalId);
+    if (editingGoalId === goalId) {
+      setEditingGoalId(null);
+      setGoalName("");
+      setGoalTarget("");
+      setGoalCurrent("");
+    }
   };
 
   return (
@@ -72,7 +121,7 @@ export default function BudgetsScreen() {
                 returnKeyType="done"
               />
             </View>
-            <PrimaryButton label="Salvar orçamento" onPress={handleBudgetSave} />
+            <PrimaryButton label={editingBudgetId ? "Atualizar orçamento" : "Salvar orçamento"} onPress={handleBudgetSave} />
           </View>
         </SectionCard>
 
@@ -91,16 +140,22 @@ export default function BudgetsScreen() {
                 return (
                   <View key={budget.id} className="gap-2 rounded-[24px] border border-border bg-background px-4 py-4">
                     <View className="flex-row items-center justify-between gap-3">
-                      <View>
+                      <View className="flex-1">
                         <Text className="text-sm font-semibold text-foreground">{category?.name ?? "Categoria"}</Text>
                         <Text className="text-xs leading-5 text-muted">Mês de referência {budget.month}</Text>
                       </View>
-                      <Text className="text-xs font-semibold text-muted">{Math.round(progress * 100)}%</Text>
+                      <View className="flex-row gap-2">
+                        <Text className="text-xs font-semibold text-muted">{Math.round(progress * 100)}%</Text>
+                      </View>
                     </View>
                     <ProgressBar value={progress} color={progress > 1 ? "#EF4444" : category?.color ?? "#2F6BFF"} />
                     <Text className="text-xs leading-5 text-muted">
                       {formatCurrency(spent)} consumidos de {formatCurrency(budget.amount)} planejados.
                     </Text>
+                    <View className="flex-row gap-2 pt-2">
+                      <PrimaryButton label="Editar" onPress={() => handleBudgetEdit(budget)} />
+                      <PrimaryButton label="Deletar" onPress={() => handleBudgetDelete(budget.id)} tone="secondary" />
+                    </View>
                   </View>
                 );
               })
@@ -126,7 +181,7 @@ export default function BudgetsScreen() {
               <FieldLabel>Prazo</FieldLabel>
               <InputField value={goalDeadline} onChangeText={setGoalDeadline} placeholder="AAAA-MM-DD" autoCapitalize="none" returnKeyType="done" />
             </View>
-            <PrimaryButton label="Salvar meta" onPress={handleGoalSave} tone="secondary" />
+            <PrimaryButton label={editingGoalId ? "Atualizar meta" : "Salvar meta"} onPress={handleGoalSave} tone="secondary" />
           </View>
         </SectionCard>
 
@@ -144,6 +199,10 @@ export default function BudgetsScreen() {
                   <Text className="text-xs leading-5 text-muted">
                     {formatCurrency(goal.currentAmount)} de {formatCurrency(goal.targetAmount)} acumulados.
                   </Text>
+                  <View className="flex-row gap-2 pt-2">
+                    <PrimaryButton label="Editar" onPress={() => handleGoalEdit(goal)} />
+                    <PrimaryButton label="Deletar" onPress={() => handleGoalDelete(goal.id)} tone="secondary" />
+                  </View>
                 </View>
               );
             })}

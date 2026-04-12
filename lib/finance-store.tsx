@@ -112,6 +112,16 @@ interface FinanceContextValue {
   addReminder: (input: Omit<FinanceReminder, "id" | "paid">) => void;
   toggleReminderPaid: (reminderId: string) => void;
   updateSettings: (patch: Partial<FinanceSettings>) => void;
+  editCategory: (categoryId: string, input: Partial<Omit<FinanceCategory, "id">>) => void;
+  removeCategory: (categoryId: string) => void;
+  editBudget: (budgetId: string, input: Partial<Omit<FinanceBudget, "id">>) => void;
+  removeBudget: (budgetId: string) => void;
+  editGoal: (goalId: string, input: Partial<Omit<FinanceGoal, "id">>) => void;
+  removeGoal: (goalId: string) => void;
+  editAccount: (accountId: string, input: Partial<Omit<FinanceAccount, "id">>) => void;
+  removeAccount: (accountId: string) => void;
+  editCard: (cardId: string, input: Partial<Omit<FinanceCard, "id">>) => void;
+  removeCard: (cardId: string) => void;
   getCategoryById: (categoryId: string) => FinanceCategory | undefined;
   getBudgetSpent: (budget: FinanceBudget) => number;
   getCurrencySymbol: () => string;
@@ -459,6 +469,129 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }));
   };
 
+  const editCategory = (categoryId: string, input: Partial<Omit<FinanceCategory, "id">>) => {
+    setState((current) => ({
+      ...current,
+      categories: current.categories.map((category) =>
+        category.id === categoryId
+          ? {
+              ...category,
+              name: input.name?.trim() || category.name,
+              color: input.color || category.color,
+              icon: input.icon || category.icon,
+              type: input.type || category.type,
+            }
+          : category,
+      ),
+    }));
+  };
+
+  const removeCategory = (categoryId: string) => {
+    setState((current) => ({
+      ...current,
+      categories: current.categories.filter((category) => category.id !== categoryId),
+      budgets: current.budgets.filter((budget) => budget.categoryId !== categoryId),
+    }));
+  };
+
+  const editBudget = (budgetId: string, input: Partial<Omit<FinanceBudget, "id">>) => {
+    setState((current) => ({
+      ...current,
+      budgets: current.budgets.map((budget) =>
+        budget.id === budgetId
+          ? {
+              ...budget,
+              categoryId: input.categoryId || budget.categoryId,
+              amount: input.amount && input.amount > 0 ? Number(input.amount) : budget.amount,
+              month: input.month || budget.month,
+            }
+          : budget,
+      ),
+    }));
+  };
+
+  const removeBudget = (budgetId: string) => {
+    setState((current) => ({
+      ...current,
+      budgets: current.budgets.filter((budget) => budget.id !== budgetId),
+    }));
+  };
+
+  const editGoal = (goalId: string, input: Partial<Omit<FinanceGoal, "id">>) => {
+    setState((current) => ({
+      ...current,
+      goals: current.goals.map((goal) =>
+        goal.id === goalId
+          ? {
+              ...goal,
+              name: input.name?.trim() || goal.name,
+              targetAmount: input.targetAmount && input.targetAmount > 0 ? Number(input.targetAmount) : goal.targetAmount,
+              currentAmount: input.currentAmount !== undefined ? Number(input.currentAmount) : goal.currentAmount,
+              deadline: input.deadline || goal.deadline,
+            }
+          : goal,
+      ),
+    }));
+  };
+
+  const removeGoal = (goalId: string) => {
+    setState((current) => ({
+      ...current,
+      goals: current.goals.filter((goal) => goal.id !== goalId),
+    }));
+  };
+
+  const editAccount = (accountId: string, input: Partial<Omit<FinanceAccount, "id">>) => {
+    setState((current) => ({
+      ...current,
+      accounts: current.accounts.map((account) =>
+        account.id === accountId
+          ? {
+              ...account,
+              name: input.name?.trim() || account.name,
+              kind: input.kind || account.kind,
+              balance: input.balance !== undefined ? Number(input.balance) : account.balance,
+            }
+          : account,
+      ),
+    }));
+  };
+
+  const removeAccount = (accountId: string) => {
+    setState((current) => ({
+      ...current,
+      accounts: current.accounts.filter((account) => account.id !== accountId),
+      transactions: current.transactions.filter(
+        (transaction) => transaction.accountId !== accountId && transaction.destinationAccountId !== accountId,
+      ),
+    }));
+  };
+
+  const editCard = (cardId: string, input: Partial<Omit<FinanceCard, "id">>) => {
+    setState((current) => ({
+      ...current,
+      cards: current.cards.map((card) =>
+        card.id === cardId
+          ? {
+              ...card,
+              name: input.name?.trim() || card.name,
+              limit: input.limit && input.limit > 0 ? Number(input.limit) : card.limit,
+              closingDay: input.closingDay !== undefined ? Number(input.closingDay) : card.closingDay,
+              dueDay: input.dueDay !== undefined ? Number(input.dueDay) : card.dueDay,
+            }
+          : card,
+      ),
+    }));
+  };
+
+  const removeCard = (cardId: string) => {
+    setState((current) => ({
+      ...current,
+      cards: current.cards.filter((card) => card.id !== cardId),
+      transactions: current.transactions.filter((transaction) => transaction.cardId !== cardId),
+    }));
+  };
+
   const currentMonthTransactions = useMemo(
     () => state.transactions.filter((transaction) => transaction.date.startsWith(monthKey())),
     [state.transactions],
@@ -544,10 +677,20 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       addTransaction,
       removeTransaction,
       addCategory,
+      editCategory,
+      removeCategory,
       addBudget,
+      editBudget,
+      removeBudget,
       addGoal,
+      editGoal,
+      removeGoal,
       addAccount,
+      editAccount,
+      removeAccount,
       addCard,
+      editCard,
+      removeCard,
       addReminder,
       toggleReminderPaid,
       updateSettings,

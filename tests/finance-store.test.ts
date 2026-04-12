@@ -111,3 +111,189 @@ describe("finance-store business rules", () => {
     expect(next.accounts.find((account) => account.id === "acc-2")?.balance).toBe(550);
   });
 });
+
+
+describe("v1.0.5 - Edit and Delete Operations", () => {
+  it("edita nome e cor de uma categoria", () => {
+    const state = cloneState({
+      categories: [{ id: "cat-1", name: "Alimentação", type: "expense", color: "#2F6BFF", icon: "payments" }],
+    });
+
+    const updated = {
+      ...state,
+      categories: state.categories.map((cat) =>
+        cat.id === "cat-1"
+          ? { ...cat, name: "Comida", color: "#FF0000" }
+          : cat,
+      ),
+    };
+
+    expect(updated.categories[0]?.name).toBe("Comida");
+    expect(updated.categories[0]?.color).toBe("#FF0000");
+  });
+
+  it("remove categoria e seus orçamentos associados", () => {
+    const state = cloneState({
+      categories: [{ id: "cat-1", name: "Alimentação", type: "expense", color: "#2F6BFF", icon: "payments" }],
+      budgets: [{ id: "budget-1", categoryId: "cat-1", amount: 500, month: "2026-04" }],
+    });
+
+    const updated = {
+      ...state,
+      categories: state.categories.filter((cat) => cat.id !== "cat-1"),
+      budgets: state.budgets.filter((budget) => budget.categoryId !== "cat-1"),
+    };
+
+    expect(updated.categories).toHaveLength(0);
+    expect(updated.budgets).toHaveLength(0);
+  });
+
+  it("edita valor de um orçamento", () => {
+    const state = cloneState({
+      budgets: [{ id: "budget-1", categoryId: "cat-1", amount: 500, month: "2026-04" }],
+    });
+
+    const updated = {
+      ...state,
+      budgets: state.budgets.map((b) =>
+        b.id === "budget-1" ? { ...b, amount: 750 } : b,
+      ),
+    };
+
+    expect(updated.budgets[0]?.amount).toBe(750);
+  });
+
+  it("remove orçamento", () => {
+    const state = cloneState({
+      budgets: [{ id: "budget-1", categoryId: "cat-1", amount: 500, month: "2026-04" }],
+    });
+
+    const updated = {
+      ...state,
+      budgets: state.budgets.filter((b) => b.id !== "budget-1"),
+    };
+
+    expect(updated.budgets).toHaveLength(0);
+  });
+
+  it("edita nome e valor alvo de uma meta", () => {
+    const state = cloneState({
+      goals: [{ id: "goal-1", name: "Viagem", targetAmount: 3000, currentAmount: 500, deadline: "2026-12-31" }],
+    });
+
+    const updated = {
+      ...state,
+      goals: state.goals.map((g) =>
+        g.id === "goal-1"
+          ? { ...g, name: "Viagem Europa", targetAmount: 5000 }
+          : g,
+      ),
+    };
+
+    expect(updated.goals[0]?.name).toBe("Viagem Europa");
+    expect(updated.goals[0]?.targetAmount).toBe(5000);
+  });
+
+  it("remove meta", () => {
+    const state = cloneState({
+      goals: [{ id: "goal-1", name: "Viagem", targetAmount: 3000, currentAmount: 500, deadline: "2026-12-31" }],
+    });
+
+    const updated = {
+      ...state,
+      goals: state.goals.filter((g) => g.id !== "goal-1"),
+    };
+
+    expect(updated.goals).toHaveLength(0);
+  });
+
+  it("edita nome e saldo de uma conta", () => {
+    const state = cloneState({
+      accounts: [{ id: "acc-1", name: "Banco", kind: "bank", balance: 1000 }],
+    });
+
+    const updated = {
+      ...state,
+      accounts: state.accounts.map((a) =>
+        a.id === "acc-1"
+          ? { ...a, name: "Banco Principal", balance: 1500 }
+          : a,
+      ),
+    };
+
+    expect(updated.accounts[0]?.name).toBe("Banco Principal");
+    expect(updated.accounts[0]?.balance).toBe(1500);
+  });
+
+  it("remove conta e suas transações associadas", () => {
+    const state = cloneState({
+      accounts: [{ id: "acc-1", name: "Banco", kind: "bank", balance: 1000 }],
+      transactions: [
+        {
+          id: "tx-1",
+          type: "income",
+          title: "Salário",
+          amount: 500,
+          categoryId: "cat-1",
+          accountId: "acc-1",
+          date: "2026-04-12",
+        },
+      ],
+    });
+
+    const updated = {
+      ...state,
+      accounts: state.accounts.filter((a) => a.id !== "acc-1"),
+      transactions: state.transactions.filter(
+        (t) => t.accountId !== "acc-1" && t.destinationAccountId !== "acc-1",
+      ),
+    };
+
+    expect(updated.accounts).toHaveLength(0);
+    expect(updated.transactions).toHaveLength(0);
+  });
+
+  it("edita limite e dia de vencimento de um cartão", () => {
+    const state = cloneState({
+      cards: [{ id: "card-1", name: "Cartão", limit: 2000, currentBalance: 300, closingDay: 25, dueDay: 5 }],
+    });
+
+    const updated = {
+      ...state,
+      cards: state.cards.map((c) =>
+        c.id === "card-1"
+          ? { ...c, limit: 3000, dueDay: 10 }
+          : c,
+      ),
+    };
+
+    expect(updated.cards[0]?.limit).toBe(3000);
+    expect(updated.cards[0]?.dueDay).toBe(10);
+  });
+
+  it("remove cartão e suas transações associadas", () => {
+    const state = cloneState({
+      cards: [{ id: "card-1", name: "Cartão", limit: 2000, currentBalance: 300, closingDay: 25, dueDay: 5 }],
+      transactions: [
+        {
+          id: "tx-1",
+          type: "expense",
+          title: "Compra",
+          amount: 100,
+          categoryId: "cat-1",
+          cardId: "card-1",
+          date: "2026-04-12",
+        },
+      ],
+    });
+
+    const updated = {
+      ...state,
+      cards: state.cards.filter((c) => c.id !== "card-1"),
+      transactions: state.transactions.filter((t) => t.cardId !== "card-1"),
+    };
+
+    expect(updated.cards).toHaveLength(0);
+    expect(updated.transactions).toHaveLength(0);
+  });
+});

@@ -9,20 +9,23 @@ const categoryPalette = ["#2F6BFF", "#8B5CF6", "#16A34A", "#F59E0B", "#EF4444", 
 const categoryIcons = ["payments", "restaurant", "home", "directions-car", "health-and-safety", "celebration"];
 
 export default function MoreScreen() {
-  const { state, addCategory, addAccount, addCard, addReminder, toggleReminderPaid, updateSettings, formatCurrency } = useFinance();
+  const { state, addCategory, editCategory, removeCategory, addAccount, editAccount, removeAccount, addCard, editCard, removeCard, addReminder, toggleReminderPaid, updateSettings, formatCurrency } = useFinance();
 
   const [categoryName, setCategoryName] = useState("");
   const [categoryType, setCategoryType] = useState<FinanceCategory["type"]>("expense");
   const [categoryColor, setCategoryColor] = useState(categoryPalette[0]);
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
 
   const [accountName, setAccountName] = useState("");
   const [accountKind, setAccountKind] = useState<"bank" | "cash" | "savings">("bank");
   const [accountBalance, setAccountBalance] = useState("");
+  const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
 
   const [cardName, setCardName] = useState("");
   const [cardLimit, setCardLimit] = useState("");
   const [closingDay, setClosingDay] = useState("25");
   const [dueDay, setDueDay] = useState("5");
+  const [editingCardId, setEditingCardId] = useState<string | null>(null);
 
   const [reminderTitle, setReminderTitle] = useState("");
   const [reminderAmount, setReminderAmount] = useState("");
@@ -39,34 +42,107 @@ export default function MoreScreen() {
 
   const handleCategorySave = () => {
     if (!categoryName.trim()) return;
-    addCategory({
-      name: categoryName,
-      type: categoryType,
-      color: categoryColor,
-      icon: categoryIcons[0],
-    });
+    if (editingCategoryId) {
+      editCategory(editingCategoryId, {
+        name: categoryName,
+        type: categoryType,
+        color: categoryColor,
+        icon: categoryIcons[0],
+      });
+      setEditingCategoryId(null);
+    } else {
+      addCategory({
+        name: categoryName,
+        type: categoryType,
+        color: categoryColor,
+        icon: categoryIcons[0],
+      });
+    }
     setCategoryName("");
+  };
+
+  const handleCategoryEdit = (category: FinanceCategory) => {
+    setCategoryName(category.name);
+    setCategoryType(category.type);
+    setCategoryColor(category.color);
+    setEditingCategoryId(category.id);
+  };
+
+  const handleCategoryDelete = (categoryId: string) => {
+    removeCategory(categoryId);
+    if (editingCategoryId === categoryId) {
+      setEditingCategoryId(null);
+      setCategoryName("");
+    }
   };
 
   const handleAccountSave = () => {
     const parsedBalance = Number(accountBalance.replace(",", ".")) || 0;
     if (!accountName.trim()) return;
-    addAccount({ name: accountName, kind: accountKind, balance: parsedBalance });
+    if (editingAccountId) {
+      editAccount(editingAccountId, { name: accountName, kind: accountKind, balance: parsedBalance });
+      setEditingAccountId(null);
+    } else {
+      addAccount({ name: accountName, kind: accountKind, balance: parsedBalance });
+    }
     setAccountName("");
     setAccountBalance("");
+  };
+
+  const handleAccountEdit = (account: typeof state.accounts[0]) => {
+    setAccountName(account.name);
+    setAccountKind(account.kind);
+    setAccountBalance(account.balance.toString());
+    setEditingAccountId(account.id);
+  };
+
+  const handleAccountDelete = (accountId: string) => {
+    removeAccount(accountId);
+    if (editingAccountId === accountId) {
+      setEditingAccountId(null);
+      setAccountName("");
+      setAccountBalance("");
+    }
   };
 
   const handleCardSave = () => {
     const parsedLimit = Number(cardLimit.replace(",", "."));
     if (!cardName.trim() || !parsedLimit) return;
-    addCard({
-      name: cardName,
-      limit: parsedLimit,
-      closingDay: Number(closingDay),
-      dueDay: Number(dueDay),
-    });
+    if (editingCardId) {
+      editCard(editingCardId, {
+        name: cardName,
+        limit: parsedLimit,
+        closingDay: Number(closingDay),
+        dueDay: Number(dueDay),
+      });
+      setEditingCardId(null);
+    } else {
+      addCard({
+        name: cardName,
+        limit: parsedLimit,
+        closingDay: Number(closingDay),
+        dueDay: Number(dueDay),
+      });
+    }
     setCardName("");
     setCardLimit("");
+  };
+
+  const handleCardEdit = (card: typeof state.cards[0]) => {
+    setCardName(card.name);
+    setCardLimit(card.limit.toString());
+    setClosingDay(card.closingDay.toString());
+    setDueDay(card.dueDay.toString());
+    setEditingCardId(card.id);
+  };
+
+  const handleCardDelete = (cardId: string) => {
+    removeCard(cardId);
+    if (editingCardId === cardId) {
+      setEditingCardId(null);
+      setCardName("");
+      setCardLimit("");
+    }
   };
 
   const handleReminderSave = () => {
@@ -116,7 +192,7 @@ export default function MoreScreen() {
                 ))}
               </View>
             </View>
-            <PrimaryButton label="Salvar categoria" onPress={handleCategorySave} />
+            <PrimaryButton label={editingCategoryId ? "Atualizar categoria" : "Salvar categoria"} onPress={handleCategorySave} />
           </View>
         </SectionCard>
 
@@ -138,13 +214,21 @@ export default function MoreScreen() {
               <FieldLabel>Saldo inicial</FieldLabel>
               <InputField value={accountBalance} onChangeText={setAccountBalance} keyboardType="decimal-pad" placeholder="0,00" returnKeyType="done" />
             </View>
-            <PrimaryButton label="Salvar conta" onPress={handleAccountSave} />
+            <PrimaryButton label={editingAccountId ? "Atualizar conta" : "Salvar conta"} onPress={handleAccountSave} />
             <View className="gap-3">
               {state.accounts.map((account) => (
                 <View key={account.id} className="rounded-[22px] bg-background px-4 py-4">
-                  <Text className="text-sm font-semibold text-foreground">{account.name}</Text>
-                  <Text className="mt-1 text-xs text-muted">Tipo {account.kind}</Text>
-                  <Text className="mt-2 text-sm font-semibold text-foreground">{formatCurrency(account.balance)}</Text>
+                  <View className="flex-row items-center justify-between gap-2">
+                    <View className="flex-1">
+                      <Text className="text-sm font-semibold text-foreground">{account.name}</Text>
+                      <Text className="mt-1 text-xs text-muted">Tipo {account.kind}</Text>
+                      <Text className="mt-2 text-sm font-semibold text-foreground">{formatCurrency(account.balance)}</Text>
+                    </View>
+                    <View className="flex-row gap-1">
+                      <PrimaryButton label="Editar" onPress={() => handleAccountEdit(account)} />
+                      <PrimaryButton label="Deletar" onPress={() => handleAccountDelete(account.id)} tone="secondary" />
+                    </View>
+                  </View>
                 </View>
               ))}
             </View>
@@ -171,15 +255,21 @@ export default function MoreScreen() {
                 <InputField value={dueDay} onChangeText={setDueDay} keyboardType="number-pad" placeholder="5" returnKeyType="done" />
               </View>
             </View>
-            <PrimaryButton label="Salvar cartão" onPress={handleCardSave} tone="secondary" />
+            <PrimaryButton label={editingCardId ? "Atualizar cartão" : "Salvar cartão"} onPress={handleCardSave} tone="secondary" />
             <View className="gap-3">
               {state.cards.map((card) => {
                 const usage = card.limit > 0 ? card.currentBalance / card.limit : 0;
                 return (
                   <View key={card.id} className="gap-2 rounded-[22px] bg-background px-4 py-4">
                     <View className="flex-row items-center justify-between gap-3">
-                      <Text className="text-sm font-semibold text-foreground">{card.name}</Text>
-                      <Text className="text-sm font-semibold text-foreground">{formatCurrency(card.currentBalance)}</Text>
+                      <View className="flex-1">
+                        <Text className="text-sm font-semibold text-foreground">{card.name}</Text>
+                        <Text className="text-sm font-semibold text-foreground">{formatCurrency(card.currentBalance)}</Text>
+                      </View>
+                      <View className="flex-row gap-1">
+                        <PrimaryButton label="Editar" onPress={() => handleCardEdit(card)} />
+                        <PrimaryButton label="Deletar" onPress={() => handleCardDelete(card.id)} tone="secondary" />
+                      </View>
                     </View>
                     <ProgressBar value={usage} color="#F59E0B" />
                     <Text className="text-xs leading-5 text-muted">
@@ -206,7 +296,7 @@ export default function MoreScreen() {
               <FieldLabel>Vencimento</FieldLabel>
               <InputField value={reminderDate} onChangeText={setReminderDate} placeholder="AAAA-MM-DD" autoCapitalize="none" returnKeyType="done" />
             </View>
-            <PrimaryButton label="Salvar lembrete" onPress={handleReminderSave} />
+            <PrimaryButton label="Salvar lembrete" onPress={handleReminderSave} tone="secondary" />
             <View className="gap-3">
               {state.reminders.map((reminder) => (
                 <View key={reminder.id} className="rounded-[22px] bg-background px-4 py-4">
