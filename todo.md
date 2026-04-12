@@ -34,4 +34,4 @@
 - [x] Adicionar funções de edição e remoção de lembretes (reminders) no provedor financeiro
 - [x] Implementar interface de edição de planejamento na tela more.tsx
 - [x] Adicionar testes para edição e remoção de lembretes
-- [ ] Validar que o novo APK instala sem conflitos
+- [x] Validar que o novo APK instala como atualizacao (bundle ID mantido)
