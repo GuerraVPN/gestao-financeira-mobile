@@ -35,3 +35,10 @@
 - [x] Implementar interface de edição de planejamento na tela more.tsx
 - [x] Adicionar testes para edição e remoção de lembretes
 - [x] Validar que o novo APK instala como atualizacao (bundle ID mantido)
+
+
+## v1.0.7 - Correção de Conflito de Assinatura
+
+- [x] Criar arquivo eas.json para configurar assinatura consistente dos APKs
+- [ ] Gerar novo APK 1.0.7 com configuração de assinatura corrigida
+- [ ] Testar instalação do novo APK sobre versões anteriores
