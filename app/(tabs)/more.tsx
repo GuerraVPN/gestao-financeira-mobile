@@ -215,6 +215,28 @@ export default function MoreScreen() {
               </View>
             </View>
             <PrimaryButton label={editingCategoryId ? "Atualizar categoria" : "Salvar categoria"} onPress={handleCategorySave} />
+            <View className="gap-3">
+              {state.categories.map((category) => (
+                <View key={category.id} className="rounded-[22px] bg-background px-4 py-4">
+                  <View className="flex-row items-center justify-between gap-2">
+                    <View className="flex-row items-center gap-3 flex-1">
+                      <View
+                        style={{ backgroundColor: category.color }}
+                        className="h-8 w-8 rounded-full"
+                      />
+                      <View className="flex-1">
+                        <Text className="text-sm font-semibold text-foreground">{category.name}</Text>
+                        <Text className="mt-1 text-xs text-muted capitalize">{category.type === "expense" ? "Despesa" : "Receita"}</Text>
+                      </View>
+                    </View>
+                    <View className="flex-row gap-1">
+                      <PrimaryButton label="Editar" onPress={() => handleCategoryEdit(category)} />
+                      <PrimaryButton label="Deletar" onPress={() => handleCategoryDelete(category.id)} tone="secondary" />
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
           </View>
         </SectionCard>
 

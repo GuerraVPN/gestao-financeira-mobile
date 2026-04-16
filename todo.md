@@ -51,3 +51,17 @@
 - [x] Validar que bundle ID permanece igual para compatibilidade com versões anteriores
 - [x] Gerar APK 1.0.10 com assinatura legítima via Publish
 - [x] Testar instalação sobre versão 1.0.9 - deve instalar como atualização sem conflitos
+
+
+## v1.0.11 - Aba Serasa e Melhorias de Categorias
+
+- [x] Adicionar estrutura de dados para débitos (Serasa)
+- [x] Implementar aba Serasa com três abas: Devendo, Pagando, Pago
+- [x] Adicionar interface de criar novo débito
+- [x] Adicionar interface de editar débito
+- [x] Adicionar interface de deletar débito
+- [x] Adicionar interface de marcar débito como pago
+- [x] Melhorar interface de categorias com criar, editar e apagar
+- [x] Adicionar categorias padrão: Alimentação, Transporte, Moradia, Lazer, Saúde
+- [x] Adicionar testes para Serasa e categorias
+- [x] Atualizar versão para 1.0.11

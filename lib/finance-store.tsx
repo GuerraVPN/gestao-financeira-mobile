@@ -64,6 +64,15 @@ export interface FinanceReminder {
   paid: boolean;
 }
 
+export interface FinanceDebt {
+  id: string;
+  title: string;
+  amount: number;
+  dueDate: string;
+  status: "devendo" | "pagando" | "pago";
+  description?: string;
+}
+
 export interface FinanceSettings {
   currency: "BRL" | "USD" | "EUR";
   notificationsEnabled: boolean;
@@ -78,6 +87,7 @@ export interface FinanceState {
   budgets: FinanceBudget[];
   goals: FinanceGoal[];
   reminders: FinanceReminder[];
+  debts: FinanceDebt[];
   settings: FinanceSettings;
 }
 
@@ -124,6 +134,9 @@ interface FinanceContextValue {
   removeCard: (cardId: string) => void;
   editReminder: (reminderId: string, input: Partial<Omit<FinanceReminder, "id">>) => void;
   removeReminder: (reminderId: string) => void;
+  addDebt: (input: Omit<FinanceDebt, "id">) => void;
+  editDebt: (debtId: string, input: Partial<Omit<FinanceDebt, "id">>) => void;
+  removeDebt: (debtId: string) => void;
   getCategoryById: (categoryId: string) => FinanceCategory | undefined;
   getBudgetSpent: (budget: FinanceBudget) => number;
   getCurrencySymbol: () => string;
@@ -201,6 +214,7 @@ export const defaultState: FinanceState = {
       paid: false,
     },
   ],
+  debts: [],
   settings: {
     currency: "BRL",
     notificationsEnabled: true,
@@ -618,6 +632,48 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }));
   };
 
+  const addDebt = (input: Omit<FinanceDebt, "id">) => {
+    setState((current) => ({
+      ...current,
+      debts: [
+        ...current.debts,
+        {
+          id: createId("debt"),
+          title: input.title.trim(),
+          amount: Number(input.amount),
+          dueDate: input.dueDate,
+          status: input.status,
+          description: input.description?.trim(),
+        },
+      ],
+    }));
+  };
+
+  const editDebt = (debtId: string, input: Partial<Omit<FinanceDebt, "id">>) => {
+    setState((current) => ({
+      ...current,
+      debts: current.debts.map((debt) =>
+        debt.id === debtId
+          ? {
+              ...debt,
+              title: input.title?.trim() || debt.title,
+              amount: input.amount !== undefined ? Number(input.amount) : debt.amount,
+              dueDate: input.dueDate || debt.dueDate,
+              status: input.status || debt.status,
+              description: input.description?.trim() || debt.description,
+            }
+          : debt,
+      ),
+    }));
+  };
+
+  const removeDebt = (debtId: string) => {
+    setState((current) => ({
+      ...current,
+      debts: current.debts.filter((debt) => debt.id !== debtId),
+    }));
+  };
+
   const currentMonthTransactions = useMemo(
     () => state.transactions.filter((transaction) => transaction.date.startsWith(monthKey())),
     [state.transactions],
@@ -721,6 +777,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       toggleReminderPaid,
       editReminder,
       removeReminder,
+      addDebt,
+      editDebt,
+      removeDebt,
       updateSettings,
       getCategoryById,
       getBudgetSpent,

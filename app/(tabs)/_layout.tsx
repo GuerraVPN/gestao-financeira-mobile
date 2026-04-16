@@ -64,6 +64,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="serasa"
+        options={{
+          title: "Serasa",
+          tabBarIcon: ({ color }) => <IconSymbol size={24} name="exclamationmark.circle.fill" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="more"
         options={{
           title: "Mais",

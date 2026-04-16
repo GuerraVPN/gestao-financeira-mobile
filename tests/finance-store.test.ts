@@ -365,3 +365,221 @@ describe("v1.0.7 - Edit and Delete Reminders", () => {
     expect(updated.reminders[0]?.id).toBe("reminder-2");
   });
 });
+
+
+// v1.0.11 - Serasa (Debts) and Enhanced Categories
+describe("v1.0.11 - Serasa and Enhanced Categories", () => {
+  it("cria novo débito com status devendo", () => {
+    const state = cloneState({
+      debts: [
+        {
+          id: "debt-1",
+          title: "Empréstimo pessoal",
+          amount: 5000,
+          dueDate: "2026-05-15",
+          status: "devendo",
+          description: "Empréstimo do banco",
+        },
+      ],
+    });
+
+    expect(state.debts).toHaveLength(1);
+    expect(state.debts[0]?.title).toBe("Empréstimo pessoal");
+    expect(state.debts[0]?.status).toBe("devendo");
+  });
+
+  it("edita débito mudando status de devendo para pagando", () => {
+    const state = cloneState({
+      debts: [
+        {
+          id: "debt-1",
+          title: "Dívida cartão",
+          amount: 2000,
+          dueDate: "2026-04-20",
+          status: "devendo",
+          description: "",
+        },
+      ],
+    });
+
+    const updated = {
+      ...state,
+      debts: state.debts.map((d) =>
+        d.id === "debt-1" ? { ...d, status: "pagando" as const } : d,
+      ),
+    };
+
+    expect(updated.debts[0]?.status).toBe("pagando");
+  });
+
+  it("edita débito mudando status de pagando para pago", () => {
+    const state = cloneState({
+      debts: [
+        {
+          id: "debt-1",
+          title: "Conta de água",
+          amount: 150,
+          dueDate: "2026-04-10",
+          status: "pagando",
+          description: "",
+        },
+      ],
+    });
+
+    const updated = {
+      ...state,
+      debts: state.debts.map((d) =>
+        d.id === "debt-1" ? { ...d, status: "pago" as const } : d,
+      ),
+    };
+
+    expect(updated.debts[0]?.status).toBe("pago");
+  });
+
+  it("remove débito da lista", () => {
+    const state = cloneState({
+      debts: [
+        {
+          id: "debt-1",
+          title: "Dívida 1",
+          amount: 1000,
+          dueDate: "2026-05-01",
+          status: "devendo",
+          description: "",
+        },
+        {
+          id: "debt-2",
+          title: "Dívida 2",
+          amount: 2000,
+          dueDate: "2026-05-15",
+          status: "pagando",
+          description: "",
+        },
+      ],
+    });
+
+    const updated = {
+      ...state,
+      debts: state.debts.filter((d) => d.id !== "debt-1"),
+    };
+
+    expect(updated.debts).toHaveLength(1);
+    expect(updated.debts[0]?.id).toBe("debt-2");
+  });
+
+  it("filtra débitos por status devendo", () => {
+    const state = cloneState({
+      debts: [
+        {
+          id: "debt-1",
+          title: "Dívida 1",
+          amount: 1000,
+          dueDate: "2026-05-01",
+          status: "devendo",
+          description: "",
+        },
+        {
+          id: "debt-2",
+          title: "Dívida 2",
+          amount: 2000,
+          dueDate: "2026-05-15",
+          status: "pago",
+          description: "",
+        },
+      ],
+    });
+
+    const devendoDebts = state.debts.filter((d) => d.status === "devendo");
+
+    expect(devendoDebts).toHaveLength(1);
+    expect(devendoDebts[0]?.title).toBe("Dívida 1");
+  });
+
+  it("calcula total de débitos por status", () => {
+    const state = cloneState({
+      debts: [
+        {
+          id: "debt-1",
+          title: "Dívida 1",
+          amount: 1000,
+          dueDate: "2026-05-01",
+          status: "devendo",
+          description: "",
+        },
+        {
+          id: "debt-2",
+          title: "Dívida 2",
+          amount: 500,
+          dueDate: "2026-05-15",
+          status: "devendo",
+          description: "",
+        },
+        {
+          id: "debt-3",
+          title: "Dívida 3",
+          amount: 2000,
+          dueDate: "2026-05-20",
+          status: "pago",
+          description: "",
+        },
+      ],
+    });
+
+    const totalDevendo = state.debts
+      .filter((d) => d.status === "devendo")
+      .reduce((sum, d) => sum + d.amount, 0);
+
+    expect(totalDevendo).toBe(1500);
+  });
+
+  it("cria categorias predefinidas (alimentação, transporte, moradia, lazer, saúde)", () => {
+    const state = cloneState();
+    const predefinedCategories = [
+      { id: "cat-alimentacao", name: "Alimentação", type: "expense" as const, color: "#FF6B6B", icon: "restaurant" },
+      { id: "cat-transporte", name: "Transporte", type: "expense" as const, color: "#4ECDC4", icon: "directions-car" },
+      { id: "cat-moradia", name: "Moradia", type: "expense" as const, color: "#95E1D3", icon: "home" },
+      { id: "cat-lazer", name: "Lazer", type: "expense" as const, color: "#FFE66D", icon: "celebration" },
+      { id: "cat-saude", name: "Saúde", type: "expense" as const, color: "#A8D8EA", icon: "health-and-safety" },
+    ];
+
+    const updated = {
+      ...state,
+      categories: [...state.categories, ...predefinedCategories],
+    };
+
+    expect(updated.categories.length).toBeGreaterThanOrEqual(5);
+    expect(updated.categories.map((c) => c.name)).toContain("Alimentação");
+    expect(updated.categories.map((c) => c.name)).toContain("Transporte");
+    expect(updated.categories.map((c) => c.name)).toContain("Moradia");
+    expect(updated.categories.map((c) => c.name)).toContain("Lazer");
+    expect(updated.categories.map((c) => c.name)).toContain("Saúde");
+  });
+
+  it("remove categoria personalizada e suas transações associadas", () => {
+    const state = cloneState({
+      categories: [
+        { id: "cat-custom", name: "Categoria Custom", type: "expense", color: "#FF0000", icon: "custom" },
+      ],
+      transactions: [
+        {
+          id: "trans-1",
+          type: "expense",
+          title: "Gasto com categoria",
+          amount: 100,
+          categoryId: "cat-custom",
+          accountId: "acc-1",
+          date: monthKey(),
+        },
+      ],
+    });
+
+    const updated = {
+      ...state,
+      categories: state.categories.filter((c) => c.id !== "cat-custom"),
+      transactions: state.transactions.filter((t) => t.categoryId !== "cat-custom"),
+    };
+
+    expect(updated.categories.find((c) => c.id === "cat-custom")).toBeUndefined();
+    expect(updated.transactions.find((t) => t.categoryId === "cat-custom")).toBeUndefined();
+  });
+});
