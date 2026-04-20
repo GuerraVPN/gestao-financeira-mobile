@@ -67,7 +67,7 @@ export default function TabLayout() {
         name="serasa"
         options={{
           title: "Serasa",
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="exclamationmark.circle.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={24} name="exclamationmark.triangle.fill" color={color} />,
         }}
       />
       <Tabs.Screen
