@@ -28,6 +28,7 @@ const MAPPING = {
   "flag.checkered.circle.fill": "flag-circle",
   "calendar.badge.clock": "event",
   "slider.horizontal.3": "tune",
+  "exclamationmark.triangle.fill": "warning",
 } as IconMapping;
 
 /**
