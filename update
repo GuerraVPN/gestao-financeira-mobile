@@ -1,0 +1,9 @@
+rm $HOME/gestao-financeira-mobile/app/'(tabs)'/transactions.tsx
+rm $HOME/gestao-financeira-mobile/components/finance/transaction-form.tsx
+rm $HOME/gestao-financeira-mobile/lib/finance-store.tsx
+cp /sdcard/Download/transactions.tsx.txt $HOME/gestao-financeira-mobile/app/'(tabs)'/transactions.tsx
+cp /sdcard/Download/transaction-form.tsx.txt $HOME/gestao-financeira-mobile/components/finance/transaction-form.tsx
+cp /sdcard/Download/finance-store.tsx.txt $HOME/gestao-financeira-mobile/lib/finance-store.tsx
+chmod -x $HOME/gestao-financeira-mobile/app/'(tabs)'/transactions.tsx
+chmod -x $HOME/gestao-financeira-mobile/components/finance/transaction-form.tsx
+chmod -x $HOME/gestao-financeira-mobile/lib/finance-store.tsx

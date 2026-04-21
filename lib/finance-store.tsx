@@ -113,6 +113,7 @@ interface FinanceContextValue {
   totalCardUsage: number;
   upcomingReminders: FinanceReminder[];
   addTransaction: (input: NewTransactionInput) => void;
+  editTransaction: (transactionId: string, input: Partial<NewTransactionInput>) => void;
   removeTransaction: (transactionId: string) => void;
   addCategory: (input: Omit<FinanceCategory, "id">) => void;
   addBudget: (input: Omit<FinanceBudget, "id" | "month"> & { month?: string }) => void;
@@ -381,6 +382,37 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       ],
     }));
   };
+  
+  const editTransaction = (transactionId: string, input: Partial<NewTransactionInput>) => {
+  setState((current) => {
+    const oldTransaction = current.transactions.find((item) => item.id === transactionId);
+    if (!oldTransaction) return current;
+
+    let nextState = applyTransactionEffect(current, oldTransaction, -1);
+
+    const updatedTransaction: FinanceTransaction = {
+      ...oldTransaction,
+      type: input.type ?? oldTransaction.type,
+      title: input.title !== undefined ? input.title.trim() : oldTransaction.title,
+      amount: input.amount ?? oldTransaction.amount,
+      categoryId: input.categoryId ?? oldTransaction.categoryId,
+      accountId: input.accountId ?? oldTransaction.accountId,
+      destinationAccountId: input.destinationAccountId ?? oldTransaction.destinationAccountId,
+      cardId: input.cardId ?? oldTransaction.cardId,
+      date: input.date ?? oldTransaction.date,
+      note: input.note !== undefined ? input.note.trim() : oldTransaction.note,
+    };
+
+    nextState = applyTransactionEffect(nextState, updatedTransaction, 1);
+
+    return {
+      ...nextState,
+      transactions: current.transactions.map((item) =>
+        item.id === transactionId ? updatedTransaction : item
+      ),
+    };
+  });
+};
 
   const addBudget = (input: Omit<FinanceBudget, "id" | "month"> & { month?: string }) => {
     if (!input.categoryId || input.amount <= 0) return;
@@ -757,6 +789,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       totalCardUsage,
       upcomingReminders,
       addTransaction,
+      editTransaction,
       removeTransaction,
       addCategory,
       editCategory,
