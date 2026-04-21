@@ -65,3 +65,7 @@
 - [x] Adicionar categorias padrão: Alimentação, Transporte, Moradia, Lazer, Saúde
 - [x] Adicionar testes para Serasa e categorias
 - [x] Atualizar versão para 1.0.11
+
+## v1.0.12 - Opcões e Melhorias
+- [x] Adicionado o botão editar nos lançamentos
+- [x] Corrigido o codigo de versão do app.config.ts
