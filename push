@@ -1,3 +1,18 @@
-echo "git add .
-git commint -m ''
-git push origin main"
+#!/bin/bash
+
+# Use echo em minúsculo
+echo "Escreva a descrição da atualização (commit):"
+
+# Lê a entrada do usuário
+read mensagem
+
+# Adiciona tudo
+git add .
+
+# Faz o commit com a mensagem que você digitou
+# Colocamos entre aspas para evitar problemas com espaços
+git commit -m "$mensagem"
+
+# Sobe para o GitHub/GitLab
+git push origin main
+

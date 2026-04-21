@@ -1,12 +1,16 @@
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View, Alert } from "react-native";
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
 
-import { ProgressBar, ScreenHeader, SectionCard, StatCard } from "@/components/finance/ui";
+import { ProgressBar, ScreenHeader, SectionCard, StatCard, PrimaryButton } from "@/components/finance/ui";
 import { ScreenContainer } from "@/components/screen-container";
 import { useFinance } from "@/lib/finance-store";
 
 export default function ReportsScreen() {
   const { state, monthlyIncome, monthlyExpense, monthlyNet, totalBalance, totalCardUsage, getCategoryById, formatCurrency } = useFinance();
 
+  // --- Lógica de Dados ---
   const expensesByCategory = state.transactions
     .filter((transaction) => transaction.type === "expense")
     .reduce<Record<string, number>>((accumulator, transaction) => {
@@ -23,77 +27,97 @@ export default function ReportsScreen() {
 
   const totalReportedExpenses = categoryReport.reduce((sum, item) => sum + item.amount, 0);
 
+  // --- Função de Exportação PDF ---
+  const generatePDF = async () => {
+    // Conteúdo HTML do Relatório
+    const htmlContent = `
+      <html>
+        <head><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" /></head>
+        <body style="font-family: sans-serif; padding: 20px;">
+          <h1 style="color: #2F6BFF;">Relatório Financeiro</h1>
+          <p>Data: ${new Date().toLocaleDateString()}</p>
+          <hr/>
+          <h3>Resumo Mensal</h3>
+          <p>Receitas: ${formatCurrency(monthlyIncome)}</p>
+          <p>Despesas: ${formatCurrency(monthlyExpense)}</p>
+          <p>Saldo: ${formatCurrency(monthlyNet)}</p>
+          
+          <h3>Despesas por Categoria</h3>
+          ${categoryReport.map(item => `
+            <div style="margin-bottom: 5px;">
+              <b>${item.category?.name ?? "Outros"}:</b> ${formatCurrency(item.amount)}
+            </div>
+          `).join('')}
+        </body>
+      </html>
+    `;
+
+    try {
+      // Cria o arquivo temporário
+      const { uri } = await Print.printToFileAsync({ html: htmlContent });
+      
+      // Abre o menu nativo de compartilhamento (onde o usuário escolhe onde salvar)
+      await Sharing.shareAsync(uri, {
+        UTI: '.pdf',
+        mimeType: 'application/pdf',
+        dialogTitle: 'Exportar Relatório',
+      });
+    } catch (error) {
+      Alert.alert("Erro", "Não foi possível gerar o PDF.");
+      console.error(error);
+    }
+  };
+
   return (
     <ScreenContainer className="bg-background">
       <ScrollView contentContainerStyle={{ padding: 20, gap: 18, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
         <ScreenHeader
           eyebrow="Análise"
           title="Relatórios"
-          subtitle="Entenda a distribuição das despesas, a evolução do mês e a composição atual do seu caixa."
+          subtitle="Entenda a distribuição das despesas e o seu saldo."
         />
+
+        {/* Botão de Exportar */}
+        <SectionCard title="Ações">
+          <PrimaryButton label="Exportar Relatório (PDF)" onPress={generatePDF} />
+        </SectionCard>
 
         <View className="gap-4">
           <View className="flex-row gap-4">
-            <StatCard label="Receitas" value={formatCurrency(monthlyIncome)} helper="Entradas registradas no mês atual." tone="positive" />
-            <StatCard label="Despesas" value={formatCurrency(monthlyExpense)} helper="Saídas lançadas no mesmo período." tone="negative" />
+            <StatCard label="Receitas" value={formatCurrency(monthlyIncome)} helper="Entradas do mês." tone="positive" />
+            <StatCard label="Despesas" value={formatCurrency(monthlyExpense)} helper="Saídas do mês." tone="negative" />
           </View>
           <View className="flex-row gap-4">
-            <StatCard label="Resultado" value={formatCurrency(monthlyNet)} helper="Diferença entre receitas e despesas." tone="accent" />
-            <StatCard label="Saldo" value={formatCurrency(totalBalance)} helper="Soma dos saldos das contas atuais." />
+            <StatCard label="Resultado" value={formatCurrency(monthlyNet)} helper="Diferença." tone="accent" />
+            <StatCard label="Saldo" value={formatCurrency(totalBalance)} helper="Soma das contas." />
           </View>
         </View>
 
-        <SectionCard title="Despesas por categoria" subtitle="A leitura abaixo evidencia onde se concentra a maior parte do seu consumo financeiro.">
+        <SectionCard title="Despesas por categoria">
           <View className="gap-4">
-            {categoryReport.length === 0 ? (
-              <Text className="text-sm leading-6 text-muted">Registre despesas para visualizar a distribuição por categoria e comparar prioridades.</Text>
-            ) : (
-              categoryReport.map((item) => {
-                const share = totalReportedExpenses > 0 ? item.amount / totalReportedExpenses : 0;
-                return (
-                  <View key={item.category?.id ?? item.amount} className="gap-2 rounded-[24px] border border-border bg-background px-4 py-4">
-                    <View className="flex-row items-center justify-between gap-3">
-                      <Text className="text-sm font-semibold text-foreground">{item.category?.name ?? "Categoria"}</Text>
-                      <Text className="text-sm font-semibold text-foreground">{formatCurrency(item.amount)}</Text>
-                    </View>
-                    <ProgressBar value={share} color={item.category?.color ?? "#2F6BFF"} />
-                    <Text className="text-xs leading-5 text-muted">Participação de {Math.round(share * 100)}% no total de despesas registradas.</Text>
+            {categoryReport.map((item) => {
+              const share = totalReportedExpenses > 0 ? item.amount / totalReportedExpenses : 0;
+              return (
+                <View key={item.category?.id ?? item.amount} className="gap-2 rounded-[24px] border border-border bg-background px-4 py-4">
+                  <View className="flex-row items-center justify-between gap-3">
+                    <Text className="text-sm font-semibold text-foreground">{item.category?.name ?? "Categoria"}</Text>
+                    <Text className="text-sm font-semibold text-foreground">{formatCurrency(item.amount)}</Text>
                   </View>
-                );
-              })
-            )}
+                  <ProgressBar value={share} color={item.category?.color ?? "#2F6BFF"} />
+                </View>
+              );
+            })}
           </View>
         </SectionCard>
 
-        <SectionCard title="Contas e cartões" subtitle="Veja rapidamente o caixa distribuído entre contas e a utilização atual dos cartões cadastrados.">
+        <SectionCard title="Contas e cartões">
           <View className="gap-4">
             {state.accounts.map((account) => (
               <View key={account.id} className="rounded-[24px] border border-border bg-background px-4 py-4">
                 <Text className="text-sm font-semibold text-foreground">{account.name}</Text>
-                <Text className="mt-1 text-xs text-muted">Tipo {account.kind}</Text>
-                <Text className="mt-3 text-lg font-semibold text-foreground">{formatCurrency(account.balance)}</Text>
+                <Text className="text-lg font-semibold text-foreground">{formatCurrency(account.balance)}</Text>
               </View>
             ))}
-            {state.cards.map((card) => {
-              const usage = card.limit > 0 ? card.currentBalance / card.limit : 0;
-              return (
-                <View key={card.id} className="gap-2 rounded-[24px] border border-border bg-background px-4 py-4">
-                  <View className="flex-row items-center justify-between gap-3">
-                    <Text className="text-sm font-semibold text-foreground">{card.name}</Text>
-                    <Text className="text-sm font-semibold text-foreground">{formatCurrency(card.currentBalance)}</Text>
-                  </View>
-                  <ProgressBar value={usage} color="#F59E0B" />
-                  <Text className="text-xs leading-5 text-muted">
-                    {Math.round(usage * 100)}% do limite utilizado. Limite total de {formatCurrency(card.limit)}.
-                  </Text>
-                </View>
-              );
-            })}
-            <View className="rounded-[24px] border border-border bg-primary/10 px-4 py-4">
-              <Text className="text-sm font-semibold text-foreground">Uso total de cartão</Text>
-              <Text className="mt-2 text-xl font-bold text-foreground">{formatCurrency(totalCardUsage)}</Text>
-              <Text className="mt-1 text-xs leading-5 text-muted">Essa visão consolida o valor pendente das faturas registradas no app.</Text>
-            </View>
           </View>
         </SectionCard>
       </ScrollView>
