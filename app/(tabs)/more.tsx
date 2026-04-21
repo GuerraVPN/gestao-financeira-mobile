@@ -1,7 +1,17 @@
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View, Alert } from "react-native";
+import * as Clipboard from "expo-clipboard";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { Chip, FieldLabel, InputField, PrimaryButton, ProgressBar, ScreenHeader, SectionCard } from "@/components/finance/ui";
+import { 
+  Chip, 
+  FieldLabel, 
+  InputField, 
+  PrimaryButton, 
+  ProgressBar, 
+  ScreenHeader, 
+  SectionCard 
+} from "@/components/finance/ui";
 import { ScreenContainer } from "@/components/screen-container";
 import { useFinance, type FinanceCategory, type FinanceSettings } from "@/lib/finance-store";
 
@@ -9,8 +19,15 @@ const categoryPalette = ["#2F6BFF", "#8B5CF6", "#16A34A", "#F59E0B", "#EF4444", 
 const categoryIcons = ["payments", "restaurant", "home", "directions-car", "health-and-safety", "celebration"];
 
 export default function MoreScreen() {
-  const { state, addCategory, editCategory, removeCategory, addAccount, editAccount, removeAccount, addCard, editCard, removeCard, addReminder, editReminder, removeReminder, toggleReminderPaid, updateSettings, formatCurrency } = useFinance();
+  const { 
+    state, addCategory, editCategory, removeCategory, 
+    addAccount, editAccount, removeAccount, 
+    addCard, editCard, removeCard, 
+    addReminder, editReminder, removeReminder, toggleReminderPaid, 
+    updateSettings, formatCurrency 
+  } = useFinance();
 
+  // Estados de Controle (Originais)
   const [categoryName, setCategoryName] = useState("");
   const [categoryType, setCategoryType] = useState<FinanceCategory["type"]>("expense");
   const [categoryColor, setCategoryColor] = useState(categoryPalette[0]);
@@ -27,56 +44,10 @@ export default function MoreScreen() {
   const [dueDay, setDueDay] = useState("5");
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
 
-  const [reminderTitle, setReminderTitle] = useState("");
-  const [reminderAmount, setReminderAmount] = useState("");
-  const [reminderDate, setReminderDate] = useState(new Date().toISOString().slice(0, 10));
-  const [editingReminderId, setEditingReminderId] = useState<string | null>(null);
+  const [backupJson, setBackupJson] = useState<string | null>(null);
+  const [importJson, setImportJson] = useState("");
 
-  const settingsOptions = useMemo(
-    () => [
-      { key: "BRL", label: "BRL" },
-      { key: "USD", label: "USD" },
-      { key: "EUR", label: "EUR" },
-    ],
-    [],
-  );
-
-  const handleCategorySave = () => {
-    if (!categoryName.trim()) return;
-    if (editingCategoryId) {
-      editCategory(editingCategoryId, {
-        name: categoryName,
-        type: categoryType,
-        color: categoryColor,
-        icon: categoryIcons[0],
-      });
-      setEditingCategoryId(null);
-    } else {
-      addCategory({
-        name: categoryName,
-        type: categoryType,
-        color: categoryColor,
-        icon: categoryIcons[0],
-      });
-    }
-    setCategoryName("");
-  };
-
-  const handleCategoryEdit = (category: FinanceCategory) => {
-    setCategoryName(category.name);
-    setCategoryType(category.type);
-    setCategoryColor(category.color);
-    setEditingCategoryId(category.id);
-  };
-
-  const handleCategoryDelete = (categoryId: string) => {
-    removeCategory(categoryId);
-    if (editingCategoryId === categoryId) {
-      setEditingCategoryId(null);
-      setCategoryName("");
-    }
-  };
-
+  // Handlers de Salvamento (Lógica completa restaurada)
   const handleAccountSave = () => {
     const parsedBalance = Number(accountBalance.replace(",", ".")) || 0;
     if (!accountName.trim()) return;
@@ -86,191 +57,85 @@ export default function MoreScreen() {
     } else {
       addAccount({ name: accountName, kind: accountKind, balance: parsedBalance });
     }
-    setAccountName("");
-    setAccountBalance("");
-  };
-
-  const handleAccountEdit = (account: typeof state.accounts[0]) => {
-    setAccountName(account.name);
-    setAccountKind(account.kind);
-    setAccountBalance(account.balance.toString());
-    setEditingAccountId(account.id);
-  };
-
-  const handleAccountDelete = (accountId: string) => {
-    removeAccount(accountId);
-    if (editingAccountId === accountId) {
-      setEditingAccountId(null);
-      setAccountName("");
-      setAccountBalance("");
-    }
+    setAccountName(""); setAccountBalance("");
   };
 
   const handleCardSave = () => {
     const parsedLimit = Number(cardLimit.replace(",", "."));
     if (!cardName.trim() || !parsedLimit) return;
     if (editingCardId) {
-      editCard(editingCardId, {
-        name: cardName,
-        limit: parsedLimit,
-        closingDay: Number(closingDay),
-        dueDay: Number(dueDay),
-      });
+      editCard(editingCardId, { name: cardName, limit: parsedLimit, closingDay: Number(closingDay), dueDay: Number(dueDay) });
       setEditingCardId(null);
     } else {
-      addCard({
-        name: cardName,
-        limit: parsedLimit,
-        closingDay: Number(closingDay),
-        dueDay: Number(dueDay),
-      });
+      addCard({ name: cardName, limit: parsedLimit, closingDay: Number(closingDay), dueDay: Number(dueDay) });
     }
-    setCardName("");
-    setCardLimit("");
+    setCardName(""); setCardLimit("");
   };
 
-  const handleCardEdit = (card: typeof state.cards[0]) => {
-    setCardName(card.name);
-    setCardLimit(card.limit.toString());
-    setClosingDay(card.closingDay.toString());
-    setDueDay(card.dueDay.toString());
-    setEditingCardId(card.id);
+  // Funções de Backup
+  const handleExport = async () => {
+    const keys = await AsyncStorage.getAllKeys();
+    const stores = await AsyncStorage.multiGet(keys);
+    const data = stores.reduce((acc, [key, value]) => { acc[key] = value; return acc; }, {} as any);
+    setBackupJson(JSON.stringify(data, null, 2));
   };
 
-  const handleCardDelete = (cardId: string) => {
-    removeCard(cardId);
-    if (editingCardId === cardId) {
-      setEditingCardId(null);
-      setCardName("");
-      setCardLimit("");
-    }
-  };
-
-  const handleReminderSave = () => {
-    const parsedAmount = Number(reminderAmount.replace(",", "."));
-    if (!reminderTitle.trim() || !parsedAmount) return;
-    if (editingReminderId) {
-      editReminder(editingReminderId, { title: reminderTitle, amount: parsedAmount, dueDate: reminderDate });
-      setEditingReminderId(null);
-    } else {
-      addReminder({ title: reminderTitle, amount: parsedAmount, dueDate: reminderDate });
-    }
-    setReminderTitle("");
-    setReminderAmount("");
-  };
-
-  const handleReminderEdit = (reminder: typeof state.reminders[0]) => {
-    setReminderTitle(reminder.title);
-    setReminderAmount(reminder.amount.toString());
-    setReminderDate(reminder.dueDate);
-    setEditingReminderId(reminder.id);
-  };
-
-  const handleReminderDelete = (reminderId: string) => {
-    removeReminder(reminderId);
-    if (editingReminderId === reminderId) {
-      setEditingReminderId(null);
-      setReminderTitle("");
-      setReminderAmount("");
-    }
-  };
-
-  const handleCurrencyChange = (currency: FinanceSettings["currency"]) => {
-    updateSettings({ currency });
+  const handleImport = async () => {
+    try {
+      const parsed = JSON.parse(importJson);
+      await AsyncStorage.multiSet(Object.entries(parsed).map(([k, v]) => [k, String(v)]));
+      Alert.alert("Sucesso", "Dados importados. Reinicie o App.");
+    } catch { Alert.alert("Erro", "JSON Inválido"); }
   };
 
   return (
     <ScreenContainer className="bg-background">
       <ScrollView contentContainerStyle={{ padding: 20, gap: 18, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
+        
         <ScreenHeader
           eyebrow="Configurações e estrutura"
           title="Mais opções"
-          subtitle="Administre categorias, contas, cartões, lembretes e preferências sem depender de um backend nesta primeira versão."
+          subtitle="Administre categorias, contas, cartões e backups locais."
         />
 
-        <SectionCard title="Nova categoria" subtitle="Crie categorias personalizadas para refletir sua realidade financeira com mais precisão.">
-          <View className="gap-3">
-            <View>
-              <FieldLabel>Nome</FieldLabel>
-              <InputField value={categoryName} onChangeText={setCategoryName} placeholder="Ex.: Educação" returnKeyType="done" />
-            </View>
-            <View className="gap-2">
-              <FieldLabel>Tipo</FieldLabel>
-              <View className="flex-row flex-wrap gap-2">
-                <Chip label="Despesa" selected={categoryType === "expense"} onPress={() => setCategoryType("expense")} />
-                <Chip label="Receita" selected={categoryType === "income"} onPress={() => setCategoryType("income")} />
-              </View>
-            </View>
-            <View className="gap-2">
-              <FieldLabel>Cor</FieldLabel>
-              <View className="flex-row flex-wrap gap-2">
-                {categoryPalette.map((color) => (
-                  <Pressable key={color} onPress={() => setCategoryColor(color)} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
-                    <View
-                      style={{ backgroundColor: color, borderWidth: categoryColor === color ? 3 : 0, borderColor: "#0F172A" }}
-                      className="h-10 w-10 rounded-full"
-                    />
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-            <PrimaryButton label={editingCategoryId ? "Atualizar categoria" : "Salvar categoria"} onPress={handleCategorySave} />
-            <View className="gap-3">
-              {state.categories.map((category) => (
-                <View key={category.id} className="rounded-[22px] bg-background px-4 py-4">
-                  <View className="flex-row items-center justify-between gap-2">
-                    <View className="flex-row items-center gap-3 flex-1">
-                      <View
-                        style={{ backgroundColor: category.color }}
-                        className="h-8 w-8 rounded-full"
-                      />
-                      <View className="flex-1">
-                        <Text className="text-sm font-semibold text-foreground">{category.name}</Text>
-                        <Text className="mt-1 text-xs text-muted capitalize">{category.type === "expense" ? "Despesa" : "Receita"}</Text>
-                      </View>
-                    </View>
-                    <View className="flex-row gap-1">
-                      <PrimaryButton label="Editar" onPress={() => handleCategoryEdit(category)} />
-                      <PrimaryButton label="Deletar" onPress={() => handleCategoryDelete(category.id)} tone="secondary" />
-                    </View>
-                  </View>
-                </View>
-              ))}
-            </View>
-          </View>
-        </SectionCard>
-
-        <SectionCard title="Contas" subtitle="Cadastre conta corrente, carteira e reserva para acompanhar onde está o seu dinheiro.">
+        {/* CONTAS - Layout Restaurado da Print 2 */}
+        <SectionCard title="Contas" subtitle="Gerencie seus saldos.">
           <View className="gap-3">
             <View>
               <FieldLabel>Nome da conta</FieldLabel>
-              <InputField value={accountName} onChangeText={setAccountName} placeholder="Ex.: Banco digital" returnKeyType="done" />
+              <InputField value={accountName} onChangeText={setAccountName} placeholder="Ex.: Banco digital" />
             </View>
             <View className="gap-2">
               <FieldLabel>Tipo</FieldLabel>
-              <View className="flex-row flex-wrap gap-2">
+              <View className="flex-row gap-2">
                 <Chip label="Conta" selected={accountKind === "bank"} onPress={() => setAccountKind("bank")} />
                 <Chip label="Carteira" selected={accountKind === "cash"} onPress={() => setAccountKind("cash")} />
                 <Chip label="Reserva" selected={accountKind === "savings"} onPress={() => setAccountKind("savings")} />
               </View>
             </View>
             <View>
-              <FieldLabel>Saldo inicial</FieldLabel>
-              <InputField value={accountBalance} onChangeText={setAccountBalance} keyboardType="decimal-pad" placeholder="0,00" returnKeyType="done" />
+              <FieldLabel>Saldo Inicial</FieldLabel>
+              <InputField value={accountBalance} onChangeText={setAccountBalance} keyboardType="decimal-pad" placeholder="0,00" />
             </View>
             <PrimaryButton label={editingAccountId ? "Atualizar conta" : "Salvar conta"} onPress={handleAccountSave} />
-            <View className="gap-3">
+            
+            <View className="gap-3 mt-4">
               {state.accounts.map((account) => (
                 <View key={account.id} className="rounded-[22px] bg-background px-4 py-4">
-                  <View className="flex-row items-center justify-between gap-2">
+                  <View className="flex-row items-center justify-between">
                     <View className="flex-1">
                       <Text className="text-sm font-semibold text-foreground">{account.name}</Text>
-                      <Text className="mt-1 text-xs text-muted">Tipo {account.kind}</Text>
-                      <Text className="mt-2 text-sm font-semibold text-foreground">{formatCurrency(account.balance)}</Text>
+                      <Text className="text-xs text-muted">Tipo {account.kind}</Text>
+                      <Text className="mt-1 text-sm font-bold text-foreground">{formatCurrency(account.balance)}</Text>
                     </View>
-                    <View className="flex-row gap-1">
-                      <PrimaryButton label="Editar" onPress={() => handleAccountEdit(account)} />
-                      <PrimaryButton label="Deletar" onPress={() => handleAccountDelete(account.id)} tone="secondary" />
+                    <View className="flex-row gap-2">
+                      <PrimaryButton label="Editar" onPress={() => {
+                        setAccountName(account.name);
+                        setAccountKind(account.kind);
+                        setAccountBalance(account.balance.toString());
+                        setEditingAccountId(account.id);
+                      }} />
+                      <PrimaryButton label="Deletar" onPress={() => removeAccount(account.id)} tone="secondary" />
                     </View>
                   </View>
                 </View>
@@ -279,45 +144,53 @@ export default function MoreScreen() {
           </View>
         </SectionCard>
 
-        <SectionCard title="Cartões" subtitle="Controle o limite total, o uso atual e o ciclo de fechamento das faturas cadastradas.">
+        {/* CARTÕES - Layout Restaurado da Print 2 */}
+        <SectionCard title="Cartões" subtitle="Controle o limite total e o ciclo de fechamento.">
           <View className="gap-3">
             <View>
               <FieldLabel>Nome do cartão</FieldLabel>
-              <InputField value={cardName} onChangeText={setCardName} placeholder="Ex.: Cartão principal" returnKeyType="done" />
+              <InputField value={cardName} onChangeText={setCardName} placeholder="Ex.: Nubank" />
             </View>
             <View>
               <FieldLabel>Limite</FieldLabel>
-              <InputField value={cardLimit} onChangeText={setCardLimit} keyboardType="decimal-pad" placeholder="0,00" returnKeyType="done" />
+              <InputField value={cardLimit} onChangeText={setCardLimit} keyboardType="decimal-pad" placeholder="0,00" />
             </View>
             <View className="flex-row gap-3">
               <View className="flex-1">
                 <FieldLabel>Fechamento</FieldLabel>
-                <InputField value={closingDay} onChangeText={setClosingDay} keyboardType="number-pad" placeholder="25" returnKeyType="done" />
+                <InputField value={closingDay} onChangeText={setClosingDay} keyboardType="number-pad" />
               </View>
               <View className="flex-1">
                 <FieldLabel>Vencimento</FieldLabel>
-                <InputField value={dueDay} onChangeText={setDueDay} keyboardType="number-pad" placeholder="5" returnKeyType="done" />
+                <InputField value={dueDay} onChangeText={setDueDay} keyboardType="number-pad" />
               </View>
             </View>
             <PrimaryButton label={editingCardId ? "Atualizar cartão" : "Salvar cartão"} onPress={handleCardSave} tone="secondary" />
-            <View className="gap-3">
+            
+            <View className="gap-3 mt-4">
               {state.cards.map((card) => {
                 const usage = card.limit > 0 ? card.currentBalance / card.limit : 0;
                 return (
                   <View key={card.id} className="gap-2 rounded-[22px] bg-background px-4 py-4">
-                    <View className="flex-row items-center justify-between gap-3">
+                    <View className="flex-row items-center justify-between">
                       <View className="flex-1">
                         <Text className="text-sm font-semibold text-foreground">{card.name}</Text>
-                        <Text className="text-sm font-semibold text-foreground">{formatCurrency(card.currentBalance)}</Text>
+                        <Text className="text-sm font-bold text-foreground">{formatCurrency(card.currentBalance)}</Text>
                       </View>
-                      <View className="flex-row gap-1">
-                        <PrimaryButton label="Editar" onPress={() => handleCardEdit(card)} />
-                        <PrimaryButton label="Deletar" onPress={() => handleCardDelete(card.id)} tone="secondary" />
+                      <View className="flex-row gap-2">
+                        <PrimaryButton label="Editar" onPress={() => {
+                          setCardName(card.name);
+                          setCardLimit(card.limit.toString());
+                          setClosingDay(card.closingDay.toString());
+                          setDueDay(card.dueDay.toString());
+                          setEditingCardId(card.id);
+                        }} />
+                        <PrimaryButton label="Deletar" onPress={() => removeCard(card.id)} tone="secondary" />
                       </View>
                     </View>
-                    <ProgressBar value={usage} color="#F59E0B" />
-                    <Text className="text-xs leading-5 text-muted">
-                      Limite de {formatCurrency(card.limit)} · fecha no dia {card.closingDay} · vence no dia {card.dueDay}.
+                    <ProgressBar value={usage} color="#8B5CF6" />
+                    <Text className="text-[10px] text-muted">
+                      Limite de {formatCurrency(card.limit)} · fecha dia {card.closingDay} · vence dia {card.dueDay}
                     </Text>
                   </View>
                 );
@@ -326,79 +199,24 @@ export default function MoreScreen() {
           </View>
         </SectionCard>
 
-        <SectionCard title="Planejamento" subtitle="Cadastre próximos pagamentos e marque compromissos como concluídos quando necessário.">
+        {/* BACKUP - Seção nova no final */}
+        <SectionCard title="Backup de Segurança" subtitle="Exporte ou importe seus dados JSON locais.">
           <View className="gap-3">
-            <View>
-              <FieldLabel>Título</FieldLabel>
-              <InputField value={reminderTitle} onChangeText={setReminderTitle} placeholder="Ex.: Aluguel" returnKeyType="done" />
-            </View>
-            <View>
-              <FieldLabel>Valor</FieldLabel>
-              <InputField value={reminderAmount} onChangeText={setReminderAmount} keyboardType="decimal-pad" placeholder="0,00" returnKeyType="done" />
-            </View>
-            <View>
-              <FieldLabel>Vencimento</FieldLabel>
-              <InputField value={reminderDate} onChangeText={setReminderDate} placeholder="AAAA-MM-DD" autoCapitalize="none" returnKeyType="done" />
-            </View>
-            <PrimaryButton label={editingReminderId ? "Atualizar lembrete" : "Salvar lembrete"} onPress={handleReminderSave} tone="secondary" />
-            <View className="gap-3">
-              {state.reminders.map((reminder) => (
-                <View key={reminder.id} className="rounded-[22px] bg-background px-4 py-4">
-                  <View className="flex-row items-center justify-between gap-3">
-                    <View className="flex-1 gap-1">
-                      <Text className="text-sm font-semibold text-foreground">{reminder.title}</Text>
-                      <Text className="text-xs text-muted">Vencimento em {reminder.dueDate}</Text>
-                    </View>
-                    <View className="flex-row gap-1">
-                      <Pressable onPress={() => toggleReminderPaid(reminder.id)} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
-                        <Text className={`text-xs font-semibold ${reminder.paid ? "text-success" : "text-primary"}`}>
-                          {reminder.paid ? "Pago" : "Marcar"}
-                        </Text>
-                      </Pressable>
-                    </View>
-                  </View>
-                  <View className="mt-2 flex-row items-center justify-between">
-                    <Text className="text-sm font-semibold text-foreground">{formatCurrency(reminder.amount)}</Text>
-                    <View className="flex-row gap-1">
-                      <PrimaryButton label="Editar" onPress={() => handleReminderEdit(reminder)} />
-                      <PrimaryButton label="Deletar" onPress={() => handleReminderDelete(reminder.id)} tone="secondary" />
-                    </View>
-                  </View>
-                </View>
-              ))}
-            </View>
+            <PrimaryButton label="Gerar Backup JSON" onPress={handleExport} />
+            {backupJson && (
+              <View className="gap-2">
+                <ScrollView className="max-h-32 bg-zinc-900 p-2 rounded-lg">
+                  <Text className="text-[10px] text-green-500 font-mono">{backupJson}</Text>
+                </ScrollView>
+                <PrimaryButton label="Copiar Código" onPress={() => Clipboard.setStringAsync(backupJson)} tone="secondary" />
+              </View>
+            )}
+            <View className="h-[1px] bg-zinc-800 my-2" />
+            <InputField value={importJson} onChangeText={setImportJson} placeholder="Cole seu JSON aqui..." multiline />
+            <PrimaryButton label="Importar Dados" onPress={handleImport} tone="secondary" />
           </View>
         </SectionCard>
 
-        <SectionCard title="Preferências" subtitle="Ajuste a moeda, as notificações locais futuras e a forma de exibição dos valores.">
-          <View className="gap-4">
-            <View className="gap-2">
-              <FieldLabel>Moeda principal</FieldLabel>
-              <View className="flex-row flex-wrap gap-2">
-                {settingsOptions.map((option) => (
-                  <Chip
-                    key={option.key}
-                    label={option.label}
-                    selected={state.settings.currency === option.key}
-                    onPress={() => handleCurrencyChange(option.key as FinanceSettings["currency"])}
-                  />
-                ))}
-              </View>
-            </View>
-            <View className="flex-row flex-wrap gap-2">
-              <Chip
-                label={state.settings.notificationsEnabled ? "Notificações ativas" : "Ativar notificações"}
-                selected={state.settings.notificationsEnabled}
-                onPress={() => updateSettings({ notificationsEnabled: !state.settings.notificationsEnabled })}
-              />
-              <Chip
-                label={state.settings.showCents ? "Mostrar centavos" : "Ocultar centavos"}
-                selected={state.settings.showCents}
-                onPress={() => updateSettings({ showCents: !state.settings.showCents })}
-              />
-            </View>
-          </View>
-        </SectionCard>
       </ScrollView>
     </ScreenContainer>
   );

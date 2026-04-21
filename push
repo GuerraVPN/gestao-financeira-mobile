@@ -1,0 +1,3 @@
+echo "git add .
+git commint -m ''
+git push origin main"

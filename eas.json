@@ -6,7 +6,7 @@
         "distribution": "internal"
       }
     },
-    "preview2": {
+    "beta": {
       "android": {
         "buildType": "apk",
         "distribution": "internal"
