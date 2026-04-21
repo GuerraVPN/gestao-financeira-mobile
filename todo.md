@@ -71,3 +71,5 @@
 - [x] Corrigido o codigo de versão do app.config.ts
 - [x] Adicionado o Botão de Importar e Exportar configurações em Mais
 - [x] Adicionado o Botão de Exportar em PDF no relatórios
+- [x] Corrigido o Package do app.config.ts
+- [x] Adicionado a opcão Update na hotbar

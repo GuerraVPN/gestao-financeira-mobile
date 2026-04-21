@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Linking, ActivityIndicator, Alert } from "react-native";
 import Constants from "expo-constants";
 import { ScreenContainer } from "@/components/screen-container"; 
-import { ScreenHeader, SectionCard, PrimaryButton } from "@/components/finance/ui"; 
+import { ScreenHeader, SectionCard, PrimaryButton } from "@/components/finance/ui";
+import { compareVersions } from "@/lib/version";
+import { UpdateStatus } from "@/components/updates/UpdateStatus";
 
 // --- CONFIGURAÇÃO ---
 const GIST_URL = "https://gist.githubusercontent.com/GuerraVPN/0a834a00f9f04c748c774a999c0e4fec/raw/updates.json";
@@ -88,21 +90,16 @@ export default function UpdatesScreen() {
 
         {/* Status da Busca */}
         <View className="items-center py-4">
-          {loading ? (
-            <ActivityIndicator color="#2F6BFF" />
-          ) : isNewer ? (
-            <View className="items-center gap-2">
-              <View className="bg-green-500/10 px-4 py-1 rounded-full">
-                <Text className="text-green-500 font-bold">Nova versão disponível!</Text>
-              </View>
-              {/* CORRIGIDO: Agora em branco */}
-              <Text className="text-4xl font-extrabold text-white">{updateData?.version}</Text>
-            </View>
-          ) : (
-            // CORRIGIDO: Texto mais claro para melhor leitura
-            <Text className="text-gray-400">Você está usando a versão mais recente.</Text>
-          )}
-        </View>
+  {loading ? (
+        <ActivityIndicator color="#2F6BFF" />
+  ) : updateData ? (
+        <UpdateStatus comparison={compareVersions(currentVersion, updateData.version)}
+        channel={channel}
+        currentVersion={currentVersion}
+        latestVersion={updateData.version}
+    />
+  ) : null}
+</View>
 
         {/* Detalhes da Versão e Botão */}
         {updateData && (

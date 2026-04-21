@@ -20,7 +20,7 @@ const env = {
 const config: ExpoConfig = {
   name: env.appName,
   slug: env.appSlug,
-  version: "1.0.12b3",
+  version: "1.0.13b1",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: env.scheme,
@@ -36,7 +36,7 @@ const config: ExpoConfig = {
   },
 
   android: {
-    versionCode: 10012,
+    versionCode: 10013,
     adaptiveIcon: {
       backgroundColor: "#E6F4FE",
       foregroundImage: "./assets/images/android-icon-foreground.png",
