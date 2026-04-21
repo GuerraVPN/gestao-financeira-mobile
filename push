@@ -16,3 +16,5 @@ git commit -m "$mensagem"
 # Sobe para o GitHub/GitLab
 git push origin main
 
+# Devolve o Relatório do GitHub
+git log -1

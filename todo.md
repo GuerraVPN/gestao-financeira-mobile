@@ -69,3 +69,5 @@
 ## v1.0.12 - Opcões e Melhorias
 - [x] Adicionado o botão editar nos lançamentos
 - [x] Corrigido o codigo de versão do app.config.ts
+- [x] Adicionado o Botão de Importar e Exportar configurações em Mais
+- [x] Adicionado o Botão de Exportar em PDF no relatórios

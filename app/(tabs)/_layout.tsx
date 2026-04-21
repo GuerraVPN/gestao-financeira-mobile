@@ -77,6 +77,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="square.grid.2x2.fill" color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="updates"
+        options={{
+          title: "Update",
+          tabBarIcon: ({ color }) => <IconSymbol size={24} name="rocket.fill" color={color} />
+        }}
+      />
     </Tabs>
   );
 }

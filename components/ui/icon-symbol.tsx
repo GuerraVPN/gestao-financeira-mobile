@@ -29,6 +29,7 @@ const MAPPING = {
   "calendar.badge.clock": "event",
   "slider.horizontal.3": "tune",
   "exclamationmark.triangle.fill": "warning",
+  "rocket.fill": "rocket-launch",
 } as IconMapping;
 
 /**
