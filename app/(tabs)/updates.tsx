@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Linking, ActivityIndicator, Alert } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Linking, ActivityIndicator, Alert, Switch } from "react-native";
 import Constants from "expo-constants";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ScreenContainer } from "@/components/screen-container"; 
 import { ScreenHeader, SectionCard, PrimaryButton } from "@/components/finance/ui";
 import { compareVersions } from "@/lib/version";
@@ -22,8 +23,33 @@ export default function UpdatesScreen() {
   const [loading, setLoading] = useState(false);
   const [updateData, setUpdateData] = useState<UpdateInfo | null>(null);
   const [error, setError] = useState(false);
+  
+  // Estado das notificações
+  const [notifyChannel, setNotifyChannel] = useState<Channel | null>(null);
 
   const currentVersion = Constants.expoConfig?.version || "0.0.0";
+
+  // Carrega a preferência salva ao iniciar
+  useEffect(() => {
+    const init = async () => {
+      const savedChannel = await AsyncStorage.getItem("@notify_channel");
+      if (savedChannel) setNotifyChannel(savedChannel as Channel);
+      checkUpdates("release");
+    };
+    init();
+  }, []);
+
+  const toggleNotify = async () => {
+    // Se já estiver ativado para este canal, desativa. Se não, ativa.
+    if (notifyChannel === channel) {
+      await AsyncStorage.removeItem("@notify_channel");
+      setNotifyChannel(null);
+    } else {
+      await AsyncStorage.setItem("@notify_channel", channel);
+      setNotifyChannel(channel);
+      Alert.alert("Notificações Ativadas", `Você será avisado de novas versões no canal ${channel}.`);
+    }
+  };
 
   const checkUpdates = async (selectedChannel: Channel) => {
     setLoading(true);
@@ -31,10 +57,8 @@ export default function UpdatesScreen() {
     setUpdateData(null);
 
     try {
-      // Adicionando cache busting para garantir que busca a versão nova
       const response = await fetch(`${GIST_URL}?t=${Date.now()}`);
       const data = await response.json();
-      
       const info = data.channels[selectedChannel];
 
       if (info) {
@@ -50,10 +74,6 @@ export default function UpdatesScreen() {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    checkUpdates("release");
-  }, []);
 
   const isNewer = updateData && updateData.version !== currentVersion;
 
@@ -88,18 +108,34 @@ export default function UpdatesScreen() {
           </View>
         </SectionCard>
 
+        {/* Novo: Switch de Notificações */}
+        <SectionCard title="Notificações">
+          <View className="flex-row justify-between items-center py-2">
+            <View className="flex-1">
+              <Text className="text-white font-medium">Alertar versões {channel}</Text>
+              <Text className="text-gray-400 text-xs mt-1">Receber aviso quando houver atualização neste canal.</Text>
+            </View>
+            <Switch 
+              value={notifyChannel === channel}
+              onValueChange={toggleNotify}
+              trackColor={{ false: "#3f3f46", true: "#2F6BFF" }}
+            />
+          </View>
+        </SectionCard>
+
         {/* Status da Busca */}
         <View className="items-center py-4">
-  {loading ? (
-        <ActivityIndicator color="#2F6BFF" />
-  ) : updateData ? (
-        <UpdateStatus comparison={compareVersions(currentVersion, updateData.version)}
-        channel={channel}
-        currentVersion={currentVersion}
-        latestVersion={updateData.version}
-    />
-  ) : null}
-</View>
+          {loading ? (
+            <ActivityIndicator color="#2F6BFF" />
+          ) : updateData ? (
+            <UpdateStatus 
+              comparison={compareVersions(currentVersion, updateData.version)}
+              channel={channel}
+              currentVersion={currentVersion}
+              latestVersion={updateData.version}
+            />
+          ) : null}
+        </View>
 
         {/* Detalhes da Versão e Botão */}
         {updateData && (
@@ -108,7 +144,6 @@ export default function UpdatesScreen() {
               {updateData.changes.map((change, index) => (
                 <View key={index} className="flex-row gap-2">
                   <Text className="text-primary">•</Text>
-                  {/* CORRIGIDO: Texto mais claro para melhor leitura */}
                   <Text className="text-gray-200 leading-5">{change}</Text>
                 </View>
               ))}
