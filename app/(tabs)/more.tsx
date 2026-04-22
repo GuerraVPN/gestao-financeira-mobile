@@ -16,7 +16,6 @@ import { ScreenContainer } from "@/components/screen-container";
 import { useFinance, type FinanceCategory, type FinanceSettings } from "@/lib/finance-store";
 
 const categoryPalette = ["#2F6BFF", "#8B5CF6", "#16A34A", "#F59E0B", "#EF4444", "#EC4899"];
-const categoryIcons = ["payments", "restaurant", "home", "directions-car", "health-and-safety", "celebration"];
 
 export default function MoreScreen() {
   const { 
@@ -27,10 +26,9 @@ export default function MoreScreen() {
     updateSettings, formatCurrency 
   } = useFinance();
 
-  // Estados de Controle (Originais)
+  // Estados
   const [categoryName, setCategoryName] = useState("");
   const [categoryType, setCategoryType] = useState<FinanceCategory["type"]>("expense");
-  const [categoryColor, setCategoryColor] = useState(categoryPalette[0]);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
 
   const [accountName, setAccountName] = useState("");
@@ -47,7 +45,18 @@ export default function MoreScreen() {
   const [backupJson, setBackupJson] = useState<string | null>(null);
   const [importJson, setImportJson] = useState("");
 
-  // Handlers de Salvamento (Lógica completa restaurada)
+  // Handlers
+  const handleCategorySave = () => {
+    if (!categoryName.trim()) return;
+    if (editingCategoryId) {
+      editCategory(editingCategoryId, { name: categoryName, type: categoryType, color: categoryPalette[0] });
+      setEditingCategoryId(null);
+    } else {
+      addCategory({ name: categoryName, type: categoryType, color: categoryPalette[0] });
+    }
+    setCategoryName("");
+  };
+
   const handleAccountSave = () => {
     const parsedBalance = Number(accountBalance.replace(",", ".")) || 0;
     if (!accountName.trim()) return;
@@ -98,7 +107,31 @@ export default function MoreScreen() {
           subtitle="Administre categorias, contas, cartões e backups locais."
         />
 
-        {/* CONTAS - Layout Restaurado da Print 2 */}
+        {/* CATEGORIAS - Restaurado */}
+        <SectionCard title="Categorias" subtitle="Organize suas receitas e despesas.">
+          <View className="gap-3">
+            <InputField value={categoryName} onChangeText={setCategoryName} placeholder="Nome da categoria" />
+            <View className="flex-row gap-2">
+              <Chip label="Despesa" selected={categoryType === "expense"} onPress={() => setCategoryType("expense")} />
+              <Chip label="Receita" selected={categoryType === "income"} onPress={() => setCategoryType("income")} />
+            </View>
+            <PrimaryButton label={editingCategoryId ? "Atualizar categoria" : "Salvar categoria"} onPress={handleCategorySave} />
+            
+            <View className="gap-2 mt-4">
+              {state.categories.map((cat) => (
+                <View key={cat.id} className="flex-row items-center justify-between bg-background p-3 rounded-xl border border-zinc-800">
+                  <Text className="text-foreground font-medium">{cat.name} ({cat.type})</Text>
+                  <View className="flex-row gap-2">
+                    <PrimaryButton label="Editar" onPress={() => { setCategoryName(cat.name); setCategoryType(cat.type); setEditingCategoryId(cat.id); }} />
+                    <PrimaryButton label="Deletar" onPress={() => removeCategory(cat.id)} tone="secondary" />
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        </SectionCard>
+
+        {/* CONTAS */}
         <SectionCard title="Contas" subtitle="Gerencie seus saldos.">
           <View className="gap-3">
             <View>
@@ -121,7 +154,7 @@ export default function MoreScreen() {
             
             <View className="gap-3 mt-4">
               {state.accounts.map((account) => (
-                <View key={account.id} className="rounded-[22px] bg-background px-4 py-4">
+                <View key={account.id} className="rounded-[22px] bg-background px-4 py-4 border border-zinc-800">
                   <View className="flex-row items-center justify-between">
                     <View className="flex-1">
                       <Text className="text-sm font-semibold text-foreground">{account.name}</Text>
@@ -129,12 +162,7 @@ export default function MoreScreen() {
                       <Text className="mt-1 text-sm font-bold text-foreground">{formatCurrency(account.balance)}</Text>
                     </View>
                     <View className="flex-row gap-2">
-                      <PrimaryButton label="Editar" onPress={() => {
-                        setAccountName(account.name);
-                        setAccountKind(account.kind);
-                        setAccountBalance(account.balance.toString());
-                        setEditingAccountId(account.id);
-                      }} />
+                      <PrimaryButton label="Editar" onPress={() => { setAccountName(account.name); setAccountKind(account.kind); setAccountBalance(account.balance.toString()); setEditingAccountId(account.id); }} />
                       <PrimaryButton label="Deletar" onPress={() => removeAccount(account.id)} tone="secondary" />
                     </View>
                   </View>
@@ -144,63 +172,38 @@ export default function MoreScreen() {
           </View>
         </SectionCard>
 
-        {/* CARTÕES - Layout Restaurado da Print 2 */}
-        <SectionCard title="Cartões" subtitle="Controle o limite total e o ciclo de fechamento.">
+        {/* CARTÕES */}
+        <SectionCard title="Cartões" subtitle="Controle o limite total.">
           <View className="gap-3">
-            <View>
-              <FieldLabel>Nome do cartão</FieldLabel>
-              <InputField value={cardName} onChangeText={setCardName} placeholder="Ex.: Nubank" />
-            </View>
-            <View>
-              <FieldLabel>Limite</FieldLabel>
-              <InputField value={cardLimit} onChangeText={setCardLimit} keyboardType="decimal-pad" placeholder="0,00" />
-            </View>
+            <InputField value={cardName} onChangeText={setCardName} placeholder="Nome do cartão" />
+            <InputField value={cardLimit} onChangeText={setCardLimit} keyboardType="decimal-pad" placeholder="Limite" />
             <View className="flex-row gap-3">
-              <View className="flex-1">
-                <FieldLabel>Fechamento</FieldLabel>
-                <InputField value={closingDay} onChangeText={setClosingDay} keyboardType="number-pad" />
-              </View>
-              <View className="flex-1">
-                <FieldLabel>Vencimento</FieldLabel>
-                <InputField value={dueDay} onChangeText={setDueDay} keyboardType="number-pad" />
-              </View>
+              <View className="flex-1"><InputField value={closingDay} onChangeText={setClosingDay} placeholder="Fechamento" keyboardType="number-pad" /></View>
+              <View className="flex-1"><InputField value={dueDay} onChangeText={setDueDay} placeholder="Vencimento" keyboardType="number-pad" /></View>
             </View>
-            <PrimaryButton label={editingCardId ? "Atualizar cartão" : "Salvar cartão"} onPress={handleCardSave} tone="secondary" />
+            <PrimaryButton label={editingCardId ? "Atualizar cartão" : "Salvar cartão"} onPress={handleCardSave} />
             
             <View className="gap-3 mt-4">
-              {state.cards.map((card) => {
-                const usage = card.limit > 0 ? card.currentBalance / card.limit : 0;
-                return (
-                  <View key={card.id} className="gap-2 rounded-[22px] bg-background px-4 py-4">
-                    <View className="flex-row items-center justify-between">
-                      <View className="flex-1">
-                        <Text className="text-sm font-semibold text-foreground">{card.name}</Text>
-                        <Text className="text-sm font-bold text-foreground">{formatCurrency(card.currentBalance)}</Text>
-                      </View>
-                      <View className="flex-row gap-2">
-                        <PrimaryButton label="Editar" onPress={() => {
-                          setCardName(card.name);
-                          setCardLimit(card.limit.toString());
-                          setClosingDay(card.closingDay.toString());
-                          setDueDay(card.dueDay.toString());
-                          setEditingCardId(card.id);
-                        }} />
-                        <PrimaryButton label="Deletar" onPress={() => removeCard(card.id)} tone="secondary" />
-                      </View>
+              {state.cards.map((card) => (
+                <View key={card.id} className="rounded-[22px] bg-background px-4 py-4 border border-zinc-800">
+                  <View className="flex-row items-center justify-between">
+                    <View className="flex-1">
+                      <Text className="text-foreground font-semibold">{card.name}</Text>
+                      <Text className="text-muted text-sm">{formatCurrency(card.currentBalance)} / {formatCurrency(card.limit)}</Text>
                     </View>
-                    <ProgressBar value={usage} color="#8B5CF6" />
-                    <Text className="text-[10px] text-muted">
-                      Limite de {formatCurrency(card.limit)} · fecha dia {card.closingDay} · vence dia {card.dueDay}
-                    </Text>
+                    <View className="flex-row gap-2">
+                      <PrimaryButton label="Editar" onPress={() => { setCardName(card.name); setCardLimit(card.limit.toString()); setEditingCardId(card.id); }} />
+                      <PrimaryButton label="Deletar" onPress={() => removeCard(card.id)} tone="secondary" />
+                    </View>
                   </View>
-                );
-              })}
+                </View>
+              ))}
             </View>
           </View>
         </SectionCard>
 
-        {/* BACKUP - Seção nova no final */}
-        <SectionCard title="Backup de Segurança" subtitle="Exporte ou importe seus dados JSON locais.">
+        {/* BACKUP */}
+        <SectionCard title="Backup" subtitle="Exporte ou importe seus dados.">
           <View className="gap-3">
             <PrimaryButton label="Gerar Backup JSON" onPress={handleExport} />
             {backupJson && (
@@ -211,7 +214,6 @@ export default function MoreScreen() {
                 <PrimaryButton label="Copiar Código" onPress={() => Clipboard.setStringAsync(backupJson)} tone="secondary" />
               </View>
             )}
-            <View className="h-[1px] bg-zinc-800 my-2" />
             <InputField value={importJson} onChangeText={setImportJson} placeholder="Cole seu JSON aqui..." multiline />
             <PrimaryButton label="Importar Dados" onPress={handleImport} tone="secondary" />
           </View>

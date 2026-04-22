@@ -73,3 +73,7 @@
 - [x] Adicionado o Botão de Exportar em PDF no relatórios
 - [x] Corrigido o Package do app.config.ts
 - [x] Adicionado a opcão Update na hotbar
+
+## v1.0.13 - Sem nome por enquanto
+- [x] Corrigido o bug de mostrar versão disponivel no updates
+- [x] 
