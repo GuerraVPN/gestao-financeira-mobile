@@ -6,6 +6,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { ScreenHeader, SectionCard, PrimaryButton } from "@/components/finance/ui";
 import { compareVersions } from "@/lib/version";
 import { UpdateStatus } from "@/components/updates/UpdateStatus";
+import messaging from '@react-native-firebase/messaging';
 
 // --- CONFIGURAÇÃO ---
 const GIST_URL = "https://gist.githubusercontent.com/GuerraVPN/0a834a00f9f04c748c774a999c0e4fec/raw/updates.json";
@@ -39,15 +40,28 @@ export default function UpdatesScreen() {
     init();
   }, []);
 
-  const toggleNotify = async () => {
-    // Se já estiver ativado para este canal, desativa. Se não, ativa.
-    if (notifyChannel === channel) {
-      await AsyncStorage.removeItem("@notify_channel");
-      setNotifyChannel(null);
-    } else {
-      await AsyncStorage.setItem("@notify_channel", channel);
-      setNotifyChannel(channel);
-      Alert.alert("Notificações Ativadas", `Você será avisado de novas versões no canal ${channel}.`);
+    const toggleNotify = async () => {
+    try {
+      if (notifyChannel === channel) {
+        // --- DESATIVANDO ---
+        // 1. Remove do tópico no Firebase
+        await messaging().unsubscribeFromTopic(channel);
+        // 2. Remove do armazenamento local
+        await AsyncStorage.removeItem("@notify_channel");
+        setNotifyChannel(null);
+        Alert.alert("Notificações Desativadas", `Você não receberá mais avisos do canal ${channel}.`);
+      } else {
+        // --- ATIVANDO ---
+        // 1. Inscreve no tópico no Firebase
+        await messaging().subscribeToTopic(channel);
+        // 2. Salva no armazenamento local
+        await AsyncStorage.setItem("@notify_channel", channel);
+        setNotifyChannel(channel);
+        Alert.alert("Notificações Ativadas", `Você será avisado de novas versões no canal ${channel}.`);
+      }
+    } catch (error) {
+      console.error("Erro ao configurar notificação:", error);
+      Alert.alert("Erro", "Não foi possível alterar a configuração de notificações.");
     }
   };
 

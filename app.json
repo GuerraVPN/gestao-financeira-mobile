@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "android": {
+      "package": "com.guerraf1000.finance",
+      "googleServicesFile": "./google-services.json"
+    },
+   "plugins": [
+  "@react-native-firebase/app",
+  "@react-native-firebase/messaging"
+   ]
+  }
+}

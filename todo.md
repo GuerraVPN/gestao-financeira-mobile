@@ -76,4 +76,5 @@
 
 ## v1.0.13 - Sem nome por enquanto
 - [x] Corrigido o bug de mostrar versão disponivel no updates
-- [x] 
+- [x] Corrigido o bug de Categorias na aba Mais
+- [x] Corrigido o bug de Updates
