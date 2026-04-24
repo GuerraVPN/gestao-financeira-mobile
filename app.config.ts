@@ -1,11 +1,7 @@
-// Load environment variables with proper priority (system > .env)
 import "./scripts/load-env.js";
 import type { ExpoConfig } from "expo/config";
 
-// 🔥 FIXO (sem geração dinâmica)
 const bundleId = "com.guerraf1000.finance";
-
-// Scheme (deep link simples e limpo)
 const schemeFromBundleId = "guerraf1000finance";
 
 const env = {
@@ -20,7 +16,7 @@ const env = {
 const config: ExpoConfig = {
   name: env.appName,
   slug: env.appSlug,
-  version: "1.0.13",
+  version: "1.0.14b2",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: env.scheme,
@@ -36,7 +32,9 @@ const config: ExpoConfig = {
   },
 
   android: {
-    versionCode: 10013,
+    versionCode: 10014,
+    package: env.androidPackage,
+    googleServicesFile: "./google-services.json", // 🔥 ADIÇÃO NECESSÁRIA
     adaptiveIcon: {
       backgroundColor: "#E6F4FE",
       foregroundImage: "./assets/images/android-icon-foreground.png",
@@ -45,18 +43,16 @@ const config: ExpoConfig = {
     },
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
-    package: env.androidPackage,
-    permissions: ["POST_NOTIFICATIONS"],
+    permissions: [
+      "POST_NOTIFICATIONS", 
+      "RECEIVE_BOOT_COMPLETED", // Adicione essas permissões para garantir o funcionamento
+      "WAKE_LOCK"
+    ],
     intentFilters: [
       {
         action: "VIEW",
         autoVerify: true,
-        data: [
-          {
-            scheme: env.scheme,
-            host: "*",
-          },
-        ],
+        data: [{ scheme: env.scheme, host: "*" }],
         category: ["BROWSABLE", "DEFAULT"],
       },
     ],
@@ -70,19 +66,15 @@ const config: ExpoConfig = {
 
   plugins: [
     "expo-router",
+    ["@react-native-firebase/app"], // 🔥 ADIÇÃO NECESSÁRIA
+    ["@react-native-firebase/messaging"], // 🔥 ADIÇÃO NECESSÁRIA
     [
       "expo-audio",
-      {
-        microphonePermission:
-          "Allow $(PRODUCT_NAME) to access your microphone.",
-      },
+      { microphonePermission: "Allow $(PRODUCT_NAME) to access your microphone." },
     ],
     [
       "expo-video",
-      {
-        supportsBackgroundPlayback: true,
-        supportsPictureInPicture: true,
-      },
+      { supportsBackgroundPlayback: true, supportsPictureInPicture: true },
     ],
     [
       "expo-splash-screen",
@@ -91,9 +83,7 @@ const config: ExpoConfig = {
         imageWidth: 200,
         resizeMode: "contain",
         backgroundColor: "#ffffff",
-        dark: {
-          backgroundColor: "#000000",
-        },
+        dark: { backgroundColor: "#000000" },
       },
     ],
     [
