@@ -74,7 +74,13 @@
 - [x] Corrigido o Package do app.config.ts
 - [x] Adicionado a opcão Update na hotbar
 
-## v1.0.13 - Sem nome por enquanto
+## v1.0.13 - Correção de bugs
 - [x] Corrigido o bug de mostrar versão disponivel no updates
 - [x] Corrigido o bug de Categorias na aba Mais
 - [x] Corrigido o bug de Updates
+
+## v1.0.14 - Relátorios e Melhorias
+- [x] Adicionadoa função de notificações com o firebase
+- [x] Corrigido o erro dos Lembretes não estarem aparecendo
+- [x] Mudança nos relátorios
+- [x] Resolvido o bug nos calculos das contas no Mais

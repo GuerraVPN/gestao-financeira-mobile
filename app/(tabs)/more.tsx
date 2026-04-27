@@ -8,14 +8,16 @@ import {
   FieldLabel, 
   InputField, 
   PrimaryButton, 
-  ProgressBar, 
   ScreenHeader, 
   SectionCard 
 } from "@/components/finance/ui";
 import { ScreenContainer } from "@/components/screen-container";
-import { useFinance, type FinanceCategory, type FinanceSettings } from "@/lib/finance-store";
+import { useFinance, type FinanceCategory } from "@/lib/finance-store";
 
 const categoryPalette = ["#2F6BFF", "#8B5CF6", "#16A34A", "#F59E0B", "#EF4444", "#EC4899"];
+
+// Função utilitária para tradução visual
+const translateType = (type: string) => (type === "income" ? "Receita" : "Despesa");
 
 export default function MoreScreen() {
   const { 
@@ -23,10 +25,10 @@ export default function MoreScreen() {
     addAccount, editAccount, removeAccount, 
     addCard, editCard, removeCard, 
     addReminder, editReminder, removeReminder, toggleReminderPaid, 
-    updateSettings, formatCurrency 
+    formatCurrency 
   } = useFinance();
 
-  // Estados
+  // --- ESTADOS ---
   const [categoryName, setCategoryName] = useState("");
   const [categoryType, setCategoryType] = useState<FinanceCategory["type"]>("expense");
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
@@ -42,17 +44,46 @@ export default function MoreScreen() {
   const [dueDay, setDueDay] = useState("5");
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
 
+  const [reminderTitle, setReminderTitle] = useState("");
+  const [reminderAmount, setReminderAmount] = useState("");
+  const [reminderDueDate, setReminderDueDate] = useState("");
+  const [editingReminderId, setEditingReminderId] = useState<string | null>(null);
+
   const [backupJson, setBackupJson] = useState<string | null>(null);
   const [importJson, setImportJson] = useState("");
 
-  // Handlers
+  // ✅ CÁLCULO AVANÇADO DE CONTAS (PROJEÇÃO)
+  const accountsWithProjectedBalance = useMemo(() => {
+    const now = new Date();
+    const accounts = state?.accounts ?? [];
+    const transactions = state?.transactions ?? [];
+
+    return accounts.map(account => {
+      // Filtrar transações futuras desta conta
+      const futureTransactions = transactions.filter(t => 
+        t.accountId === account.id && new Date(t.date) > now
+      );
+
+      // Calcular o impacto futuro (o que ainda vai sair ou entrar)
+      const futureImpact = futureTransactions.reduce((sum, t) => {
+        return t.type === "income" ? sum + t.amount : sum - t.amount;
+      }, 0);
+
+      return {
+        ...account,
+        displayBalance: (account.balance || 0) - futureImpact
+      };
+    });
+  }, [state.accounts, state.transactions]);
+
+  // --- HANDLERS ---
   const handleCategorySave = () => {
     if (!categoryName.trim()) return;
     if (editingCategoryId) {
       editCategory(editingCategoryId, { name: categoryName, type: categoryType, color: categoryPalette[0] });
       setEditingCategoryId(null);
     } else {
-      addCategory({ name: categoryName, type: categoryType, color: categoryPalette[0] });
+      addCategory({ name: categoryName, type: categoryType, color: categoryPalette[0], icon: "tag" });
     }
     setCategoryName("");
   };
@@ -81,7 +112,19 @@ export default function MoreScreen() {
     setCardName(""); setCardLimit("");
   };
 
-  // Funções de Backup
+  const handleReminderSave = () => {
+    const parsedAmount = Number(reminderAmount.replace(",", "."));
+    if (!reminderTitle.trim() || parsedAmount <= 0 || !reminderDueDate.trim()) return;
+    if (editingReminderId) {
+      editReminder(editingReminderId, { title: reminderTitle, amount: parsedAmount, dueDate: reminderDueDate });
+      setEditingReminderId(null);
+    } else {
+      addReminder({ title: reminderTitle, amount: parsedAmount, dueDate: reminderDueDate });
+    }
+    setReminderTitle(""); setReminderAmount(""); setReminderDueDate("");
+  };
+
+  // --- BACKUP ---
   const handleExport = async () => {
     const keys = await AsyncStorage.getAllKeys();
     const stores = await AsyncStorage.multiGet(keys);
@@ -107,7 +150,7 @@ export default function MoreScreen() {
           subtitle="Administre categorias, contas, cartões e backups locais."
         />
 
-        {/* CATEGORIAS - Restaurado */}
+        {/* CATEGORIAS - Traduzido */}
         <SectionCard title="Categorias" subtitle="Organize suas receitas e despesas.">
           <View className="gap-3">
             <InputField value={categoryName} onChangeText={setCategoryName} placeholder="Nome da categoria" />
@@ -120,7 +163,7 @@ export default function MoreScreen() {
             <View className="gap-2 mt-4">
               {state.categories.map((cat) => (
                 <View key={cat.id} className="flex-row items-center justify-between bg-background p-3 rounded-xl border border-zinc-800">
-                  <Text className="text-foreground font-medium">{cat.name} ({cat.type})</Text>
+                  <Text className="text-foreground font-medium">{cat.name} ({translateType(cat.type)})</Text>
                   <View className="flex-row gap-2">
                     <PrimaryButton label="Editar" onPress={() => { setCategoryName(cat.name); setCategoryType(cat.type); setEditingCategoryId(cat.id); }} />
                     <PrimaryButton label="Deletar" onPress={() => removeCategory(cat.id)} tone="secondary" />
@@ -131,7 +174,7 @@ export default function MoreScreen() {
           </View>
         </SectionCard>
 
-        {/* CONTAS */}
+        {/* CONTAS - Cálculo Avançado */}
         <SectionCard title="Contas" subtitle="Gerencie seus saldos.">
           <View className="gap-3">
             <View>
@@ -153,13 +196,13 @@ export default function MoreScreen() {
             <PrimaryButton label={editingAccountId ? "Atualizar conta" : "Salvar conta"} onPress={handleAccountSave} />
             
             <View className="gap-3 mt-4">
-              {state.accounts.map((account) => (
+              {accountsWithProjectedBalance.map((account) => (
                 <View key={account.id} className="rounded-[22px] bg-background px-4 py-4 border border-zinc-800">
                   <View className="flex-row items-center justify-between">
                     <View className="flex-1">
                       <Text className="text-sm font-semibold text-foreground">{account.name}</Text>
                       <Text className="text-xs text-muted">Tipo {account.kind}</Text>
-                      <Text className="mt-1 text-sm font-bold text-foreground">{formatCurrency(account.balance)}</Text>
+                      <Text className="mt-1 text-sm font-bold text-foreground">{formatCurrency(account.displayBalance)}</Text>
                     </View>
                     <View className="flex-row gap-2">
                       <PrimaryButton label="Editar" onPress={() => { setAccountName(account.name); setAccountKind(account.kind); setAccountBalance(account.balance.toString()); setEditingAccountId(account.id); }} />

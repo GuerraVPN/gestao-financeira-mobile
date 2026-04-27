@@ -1,9 +1,6 @@
 import { Tabs } from "expo-router";
-import { Platform, Alert } from "react-native";
+import { Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useEffect } from "react"; // Importação nova
-import messaging from '@react-native-firebase/messaging'; // Importação nova
-import AsyncStorage from "@react-native-async-storage/async-storage"; // Importação nova
 
 import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -12,37 +9,6 @@ import { useColors } from "@/hooks/use-colors";
 export default function TabLayout() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  
-  // --- INÍCIO DA LÓGICA DE NOTIFICAÇÕES ---
-  useEffect(() => {
-    async function setupNotifications() {
-      // 1. Pede permissão para o Android
-      const authStatus = await messaging().requestPermission();
-      const enabled = authStatus === messaging.AuthorizationStatus.AUTHORIZED || 
-                      authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-
-      if (enabled) {
-        // 2. Inscreve no tópico do canal salvo (ou 'release' se for a primeira vez)
-        const savedChannel = await AsyncStorage.getItem("@selected_channel") || "release";
-        await messaging().subscribeToTopic(savedChannel);
-        console.log("Inscrito no tópico:", savedChannel);
-      }
-    }
-
-    setupNotifications();
-
-    // 3. Escuta a notificação enquanto o app está aberto
-    const unsubscribe = messaging().onMessage(async remoteMessage => {
-      Alert.alert(
-        remoteMessage.notification?.title || "Nova atualização!",
-        remoteMessage.notification?.body
-      );
-    });
-
-    return unsubscribe;
-  }, []);
-  // --- FIM DA LÓGICA DE NOTIFICAÇÕES ---
-
   const bottomPadding = Platform.OS === "web" ? 12 : Math.max(insets.bottom, 8);
   const tabBarHeight = 60 + bottomPadding;
 
@@ -114,8 +80,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="updates"
         options={{
-          title: "Atualizações",
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="cloud-download-outline" color={color} />
+          title: "Update",
+          tabBarIcon: ({ color }) => <IconSymbol size={24} name="rocket.fill" color={color} />
         }}
       />
     </Tabs>

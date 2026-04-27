@@ -1,0 +1,1 @@
+cd /home/guerra/projetos/gestao-financeira-mobile && pnpm exec tsc --noEmit

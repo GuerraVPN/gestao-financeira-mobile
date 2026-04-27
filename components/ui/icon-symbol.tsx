@@ -5,7 +5,7 @@ import { SymbolWeight, SymbolViewProps } from "expo-symbols";
 import { ComponentProps } from "react";
 import { OpaqueColorValue, type StyleProp, type TextStyle } from "react-native";
 
-type IconMapping = Record<SymbolViewProps["name"], ComponentProps<typeof MaterialIcons>["name"]>;
+type IconMapping = Partial<Record<SymbolViewProps["name"], ComponentProps<typeof MaterialIcons>["name"]>>;
 type IconSymbolName = keyof typeof MAPPING;
 
 /**
@@ -30,7 +30,9 @@ const MAPPING = {
   "slider.horizontal.3": "tune",
   "exclamationmark.triangle.fill": "warning",
   "rocket.fill": "rocket-launch",
-} as IconMapping;
+  "chevron.left": "chevron-left",
+  "chevron.right": "chevron-right",
+} as const satisfies IconMapping;
 
 /**
  * An icon component that uses native SF Symbols on iOS, and Material Icons on Android and web.
@@ -49,5 +51,11 @@ export function IconSymbol({
   style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
 }) {
-  return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
+  const materialName = MAPPING[name] ?? "help-outline";
+
+  if (!MAPPING[name] && process.env.NODE_ENV !== "production") {
+    console.warn(`IconSymbol: missing mapping for '${name}', using fallback '${materialName}'`);
+  }
+
+  return <MaterialIcons color={color} size={size} name={materialName} style={style} />;
 }
