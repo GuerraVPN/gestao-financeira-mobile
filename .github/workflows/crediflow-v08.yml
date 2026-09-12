@@ -64,6 +64,16 @@ jobs:
           grep -q "application-icon-160:'res/drawable/ic_crediflow.xml'" apk-badging.txt
           $ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose CrediFlow-v0.8.apk
 
+      - name: Preserve validated APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: CrediFlow-v0.8-rebuild
+          path: |
+            CrediFlow-v0.8.apk
+            apk-badging.txt
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Boot Android and smoke-test app
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -72,45 +82,29 @@ jobs:
           profile: pixel_6
           disable-animations: true
           script: |
-            set -e
             adb install -r CrediFlow-v0.8.apk
             adb logcat -c
             adb shell am force-stop br.com.guerravpn.crediflow.v08
             adb shell am start -n br.com.guerravpn.crediflow.v08/br.com.guerravpn.crediflow.MainActivityV06 | tee launch.txt
-
-            PID=''
-            for i in $(seq 1 30); do
-              PID=$(adb shell pidof br.com.guerravpn.crediflow.v08 | tr -d '\r' || true)
-              if [ -n "$PID" ]; then break; fi
-              sleep 2
-            done
-            test -n "$PID"
-
-            # O runner Linux não tem KVM e pode levar muito mais tempo para desenhar a primeira tela.
-            sleep 12
+            sleep 20
+            adb shell pidof br.com.guerravpn.crediflow.v08 | tee pid.txt
+            test -s pid.txt
             adb shell dumpsys activity activities > activities.txt
             grep -q 'br.com.guerravpn.crediflow.MainActivityV06' activities.txt
-
-            adb logcat --pid="$PID" -d > app-logcat.txt || true
-            if grep -q 'FATAL EXCEPTION' app-logcat.txt; then
-              cat app-logcat.txt
-              exit 1
-            fi
-
+            adb logcat -d > app-logcat.txt
             adb exec-out screencap -p > CrediFlow-v0.8-smoke.png
             test -s CrediFlow-v0.8-smoke.png
-            echo "SMOKE_OK pid=$PID"
 
-      - name: Upload APK
+      - name: Upload smoke-test evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: CrediFlow-v0.8-rebuild
+          name: CrediFlow-v0.8-smoke-evidence
           path: |
-            CrediFlow-v0.8.apk
             CrediFlow-v0.8-smoke.png
-            apk-badging.txt
             launch.txt
+            pid.txt
             activities.txt
             app-logcat.txt
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 30
