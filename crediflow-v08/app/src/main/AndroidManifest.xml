@@ -3,11 +3,13 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:allowBackup="false"
-        android:usesCleartextTraffic="false"
         android:label="CrediFlow 0.8"
-        android:theme="@android:style/Theme.Material.NoActionBar">
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:theme="@style/Theme.CrediFlow"
+        android:usesCleartextTraffic="false">
         <activity
-            android:name=".MainActivity"
+            android:name="br.com.guerravpn.crediflow.MainActivityV06"
             android:exported="true"
             android:screenOrientation="portrait">
             <intent-filter>
