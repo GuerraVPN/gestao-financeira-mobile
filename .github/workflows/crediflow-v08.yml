@@ -15,7 +15,7 @@ permissions:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,7 +30,7 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Install SDK 35
-        run: yes | sdkmanager --licenses >/dev/null && sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+        run: yes | sdkmanager --licenses >/dev/null && sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'platform-tools'
 
       - name: Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -56,10 +56,37 @@ jobs:
       - name: Rename APK
         run: cp crediflow-v08/app/build/outputs/apk/debug/app-debug.apk CrediFlow-v0.8.apk
 
+      - name: Validate package, launcher and signature
+        run: |
+          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging CrediFlow-v0.8.apk | tee apk-badging.txt
+          grep -q "package: name='br.com.guerravpn.crediflow.v08'" apk-badging.txt
+          grep -q "launchable-activity: name='br.com.guerravpn.crediflow.MainActivityV06'" apk-badging.txt
+          $ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose CrediFlow-v0.8.apk
+
+      - name: Boot Android and open the app
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            adb install -r CrediFlow-v0.8.apk
+            adb shell am force-stop br.com.guerravpn.crediflow.v08
+            adb shell am start -W -n br.com.guerravpn.crediflow.v08/br.com.guerravpn.crediflow.MainActivityV06 | tee launch.txt
+            grep -q 'Status: ok' launch.txt
+            sleep 3
+            adb shell dumpsys activity activities | grep -q 'br.com.guerravpn.crediflow.MainActivityV06'
+            adb exec-out screencap -p > CrediFlow-v0.8-smoke.png
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: CrediFlow-v0.8
-          path: CrediFlow-v0.8.apk
+          name: CrediFlow-v0.8-rebuild
+          path: |
+            CrediFlow-v0.8.apk
+            CrediFlow-v0.8-smoke.png
+            apk-badging.txt
+            launch.txt
           if-no-files-found: error
           retention-days: 30
