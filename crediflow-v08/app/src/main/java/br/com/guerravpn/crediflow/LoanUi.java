@@ -1,6 +1,7 @@
 package br.com.guerravpn.crediflow;
 
 import android.app.AlertDialog;
+import android.app.DatePickerDialog;
 import android.text.InputType;
 import android.view.View;
 import android.widget.Button;
@@ -13,6 +14,7 @@ import android.widget.TextView;
 import org.json.JSONObject;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Locale;
 
 final class LoanUi {
@@ -32,24 +34,70 @@ final class LoanUi {
         LinearLayout form=u.card();u.cardTitle(form,"Simulação");
         amount=u.input("Valor desejado · ex.: 50,00",InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
         installments=u.input("Quantidade de parcelas",InputType.TYPE_CLASS_NUMBER);
-        firstDue=u.input("Primeira parcela · AAAA-MM-DD",InputType.TYPE_CLASS_DATETIME);firstDue.setText(LocalDate.now().plusMonths(1).toString());
-        form.addView(amount);form.addView(installments);form.addView(firstDue);u.caption(form,"Chave Pix para receber o empréstimo");
+
+        LocalDate today=LocalDate.now();
+        LocalDate maxDue=today.plusMonths(1);
+        firstDue=u.input("Primeira parcela · toque para escolher",InputType.TYPE_CLASS_DATETIME);
+        firstDue.setText(maxDue.toString());
+        firstDue.setFocusable(false);
+        firstDue.setClickable(true);
+        firstDue.setLongClickable(false);
+        firstDue.setOnClickListener(v->openDatePicker());
+
+        form.addView(amount);form.addView(installments);form.addView(firstDue);
+        u.caption(form,"Primeiro vencimento entre hoje e "+maxDue+" (máximo de 1 mês).");
+        u.caption(form,"Chave Pix para receber o empréstimo");
         pixType=u.spinner(new String[]{"CPF","Celular","E-mail","Chave aleatória"});form.addView(pixType);pixKey=u.input("Chave Pix",InputType.TYPE_CLASS_TEXT);form.addView(pixKey);
         error=u.error();form.addView(error);simulate=u.primary("Simular empréstimo",null);form.addView(simulate);root.addView(form);
         previewBox=u.card();previewBox.setVisibility(View.GONE);root.addView(previewBox);simulate.setOnClickListener(v->simulate());
+    }
+
+    private void openDatePicker(){
+        LocalDate today=LocalDate.now();
+        LocalDate max=today.plusMonths(1);
+        LocalDate selected;
+        try{selected=LocalDate.parse(firstDue.getText().toString().trim());}catch(Exception ignored){selected=max;}
+        if(selected.isBefore(today))selected=today;
+        if(selected.isAfter(max))selected=max;
+        DatePickerDialog dialog=new DatePickerDialog(a,(view,year,month,day)->{
+            LocalDate chosen=LocalDate.of(year,month+1,day);
+            firstDue.setText(chosen.toString());
+            preview=null;
+            previewBox.setVisibility(View.GONE);
+        },selected.getYear(),selected.getMonthValue()-1,selected.getDayOfMonth());
+        ZoneId zone=ZoneId.systemDefault();
+        dialog.getDatePicker().setMinDate(today.atStartOfDay(zone).toInstant().toEpochMilli());
+        dialog.getDatePicker().setMaxDate(max.atStartOfDay(zone).toInstant().toEpochMilli());
+        dialog.setTitle("Primeiro vencimento · até 1 mês");
+        dialog.show();
     }
 
     private void simulate(){
         error.setText("");final double value;final int count;
         try{String raw=amount.getText().toString().trim().replace(',','.');value=Double.parseDouble(raw);count=Integer.parseInt(installments.getText().toString().trim());if(value<=0||count<1)throw new IllegalArgumentException();}
         catch(Exception e){error.setText("Informe um valor e uma quantidade de parcelas válidos.");return;}
-        String due=firstDue.getText().toString().trim();if(due.length()!=10){error.setText("Informe a primeira parcela no formato AAAA-MM-DD.");return;}
+
+        String due=firstDue.getText().toString().trim();
+        try{
+            LocalDate selected=LocalDate.parse(due),today=LocalDate.now(),max=today.plusMonths(1);
+            if(selected.isBefore(today)){error.setText("A primeira parcela não pode estar no passado.");return;}
+            if(selected.isAfter(max)){error.setText("A primeira parcela não pode passar de 1 mês a partir de hoje.");return;}
+        }catch(Exception e){error.setText("Escolha uma data válida para a primeira parcela.");return;}
+
         a.busy(simulate,true,"Calculando...");a.io.execute(()->{try{Api.Resp response=Api.clientLoanPreview(a.accessToken,value,count,due);if(!response.ok())throw new Exception(response.errorMessage());JSONObject result=response.object();a.runOnUiThread(()->{a.busy(simulate,false,"Simular empréstimo");renderPreview(result);});}catch(Exception ex){a.runOnUiThread(()->{a.busy(simulate,false,"Simular empréstimo");error.setText(MainActivityV06.friendly(ex));});}});
     }
 
     private void renderPreview(JSONObject result){
         preview=result;previewBox.removeAllViews();previewBox.setVisibility(View.VISIBLE);u.cardTitle(previewBox,"Resumo da proposta");
-        u.stat(previewBox,"Valor solicitado",MainActivityV06.money(result.optDouble("amount",0)));u.stat(previewBox,"Taxa mensal",MainActivityV06.percent(result.optDouble("monthlyRate",0)));u.stat(previewBox,"Juros estimados",MainActivityV06.money(result.optDouble("interestAmount",0)));u.stat(previewBox,"Parcelas",result.optInt("installments",1)+" × "+MainActivityV06.money(result.optDouble("installmentValue",0)));u.stat(previewBox,"Total a pagar",MainActivityV06.money(result.optDouble("total",0)));u.stat(previewBox,"1º vencimento",result.optString("firstDueDate",firstDue.getText().toString().trim()));u.stat(previewBox,"Juros por atraso",String.format(new Locale("pt","BR"),"%.4f%% ao dia",result.optDouble("lateInterestDailyRate",0)*100));u.stat(previewBox,"Multa por atraso",MainActivityV06.percent(result.optDouble("lateFeeRate",0)));
+        u.stat(previewBox,"Valor solicitado",MainActivityV06.money(result.optDouble("amount",0)));
+        u.stat(previewBox,"Taxa mensal",MainActivityV06.percent(result.optDouble("monthlyRate",0)));
+        u.stat(previewBox,"Juros do período",MainActivityV06.money(result.optDouble("interestAmount",0)));
+        u.stat(previewBox,"Parcelas",result.optInt("installments",1)+" × "+MainActivityV06.money(result.optDouble("installmentValue",0)));
+        u.stat(previewBox,"Total a pagar",MainActivityV06.money(result.optDouble("total",0)));
+        u.stat(previewBox,"1º vencimento",result.optString("firstDueDate",firstDue.getText().toString().trim()));
+        u.caption(previewBox,"Cálculo: juros simples mensais sobre o valor solicitado, conforme taxa definida pelo Admin.");
+        u.stat(previewBox,"Juros por atraso",String.format(new Locale("pt","BR"),"%.4f%% ao dia",result.optDouble("lateInterestDailyRate",0)*100));
+        u.stat(previewBox,"Multa por atraso",MainActivityV06.percent(result.optDouble("lateFeeRate",0)));
         LinearLayout contract=u.mini();u.cardTitle(contract,"Contrato eletrônico");String body=result.optString("contractBody","");if(body.length()>1600)body=body.substring(0,1600)+"…";u.body(contract,body);previewBox.addView(contract);
         CheckBox accept=u.check("Li a proposta, conferi o valor, juros, parcelas, vencimento, encargos de atraso e concordo com o contrato eletrônico.");previewBox.addView(accept);TextView submitError=u.error();previewBox.addView(submitError);Button request=u.primary("Assinar e solicitar",null);previewBox.addView(request);request.setOnClickListener(v->{if(!accept.isChecked()){submitError.setText("Confirme que leu e concorda com a proposta.");return;}submit(request,submitError);});
     }
