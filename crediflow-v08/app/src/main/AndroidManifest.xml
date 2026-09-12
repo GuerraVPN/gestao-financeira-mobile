@@ -3,9 +3,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:allowBackup="false"
-        android:label="CrediFlow 0.8"
-        android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="CrediFlow"
+        android:icon="@drawable/ic_crediflow"
+        android:roundIcon="@drawable/ic_crediflow"
         android:theme="@style/Theme.CrediFlow"
         android:usesCleartextTraffic="false">
         <activity
