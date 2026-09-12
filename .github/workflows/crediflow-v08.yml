@@ -61,9 +61,10 @@ jobs:
           $ANDROID_HOME/build-tools/35.0.0/aapt dump badging CrediFlow-v0.8.apk | tee apk-badging.txt
           grep -q "package: name='br.com.guerravpn.crediflow.v08'" apk-badging.txt
           grep -q "launchable-activity: name='br.com.guerravpn.crediflow.MainActivityV06'" apk-badging.txt
+          grep -q "application-icon-160:'res/drawable/ic_crediflow.xml'" apk-badging.txt
           $ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose CrediFlow-v0.8.apk
 
-      - name: Boot Android and open the app
+      - name: Boot Android and smoke-test app
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -71,13 +72,34 @@ jobs:
           profile: pixel_6
           disable-animations: true
           script: |
+            set -e
             adb install -r CrediFlow-v0.8.apk
+            adb logcat -c
             adb shell am force-stop br.com.guerravpn.crediflow.v08
-            adb shell am start -W -n br.com.guerravpn.crediflow.v08/br.com.guerravpn.crediflow.MainActivityV06 | tee launch.txt
-            grep -q 'Status: ok' launch.txt
-            sleep 3
-            adb shell dumpsys activity activities | grep -q 'br.com.guerravpn.crediflow.MainActivityV06'
+            adb shell am start -n br.com.guerravpn.crediflow.v08/br.com.guerravpn.crediflow.MainActivityV06 | tee launch.txt
+
+            PID=''
+            for i in $(seq 1 30); do
+              PID=$(adb shell pidof br.com.guerravpn.crediflow.v08 | tr -d '\r' || true)
+              if [ -n "$PID" ]; then break; fi
+              sleep 2
+            done
+            test -n "$PID"
+
+            # O runner Linux não tem KVM e pode levar muito mais tempo para desenhar a primeira tela.
+            sleep 12
+            adb shell dumpsys activity activities > activities.txt
+            grep -q 'br.com.guerravpn.crediflow.MainActivityV06' activities.txt
+
+            adb logcat --pid="$PID" -d > app-logcat.txt || true
+            if grep -q 'FATAL EXCEPTION' app-logcat.txt; then
+              cat app-logcat.txt
+              exit 1
+            fi
+
             adb exec-out screencap -p > CrediFlow-v0.8-smoke.png
+            test -s CrediFlow-v0.8-smoke.png
+            echo "SMOKE_OK pid=$PID"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -88,5 +110,7 @@ jobs:
             CrediFlow-v0.8-smoke.png
             apk-badging.txt
             launch.txt
+            activities.txt
+            app-logcat.txt
           if-no-files-found: error
           retention-days: 30
