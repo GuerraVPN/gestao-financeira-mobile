@@ -1,9 +1,9 @@
-name: Build CrediFlow 0.8 APK
+name: Build CrediFlow 0.9 APK
 
 on:
   push:
     branches:
-      - crediflow-v0.8-build
+      - crediflow-v0.9-build
     paths:
       - 'crediflow-v08/**'
       - '.github/workflows/crediflow-v08.yml'
@@ -54,22 +54,22 @@ jobs:
         run: gradle -p crediflow-v08 :app:assembleDebug --stacktrace
 
       - name: Rename APK
-        run: cp crediflow-v08/app/build/outputs/apk/debug/app-debug.apk CrediFlow-v0.8.apk
+        run: cp crediflow-v08/app/build/outputs/apk/debug/app-debug.apk CrediFlow-v0.9-build9.apk
 
       - name: Validate package, launcher and signature
         run: |
-          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging CrediFlow-v0.8.apk | tee apk-badging.txt
-          grep -q "package: name='br.com.guerravpn.crediflow.v08'" apk-badging.txt
+          $ANDROID_HOME/build-tools/35.0.0/aapt dump badging CrediFlow-v0.9-build9.apk | tee apk-badging.txt
+          grep -q "package: name='br.com.guerravpn.crediflow.v08' versionCode='9' versionName='0.9'" apk-badging.txt
           grep -q "launchable-activity: name='br.com.guerravpn.crediflow.MainActivityV06'" apk-badging.txt
           grep -q "application-icon-160:'res/drawable/ic_crediflow.xml'" apk-badging.txt
-          $ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose CrediFlow-v0.8.apk
+          $ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose CrediFlow-v0.9-build9.apk
 
       - name: Preserve validated APK
         uses: actions/upload-artifact@v4
         with:
-          name: CrediFlow-v0.8-rebuild
+          name: CrediFlow-v0.9-build9
           path: |
-            CrediFlow-v0.8.apk
+            CrediFlow-v0.9-build9.apk
             apk-badging.txt
           if-no-files-found: error
           retention-days: 30
@@ -82,7 +82,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           script: |
-            adb install -r CrediFlow-v0.8.apk
+            adb install -r CrediFlow-v0.9-build9.apk
             adb logcat -c
             adb shell am force-stop br.com.guerravpn.crediflow.v08
             adb shell am start -n br.com.guerravpn.crediflow.v08/br.com.guerravpn.crediflow.MainActivityV06 | tee launch.txt
@@ -92,16 +92,16 @@ jobs:
             adb shell dumpsys activity activities > activities.txt
             grep -q 'br.com.guerravpn.crediflow.MainActivityV06' activities.txt
             adb logcat -d > app-logcat.txt
-            adb exec-out screencap -p > CrediFlow-v0.8-smoke.png
-            test -s CrediFlow-v0.8-smoke.png
+            adb exec-out screencap -p > CrediFlow-v0.9-build9-smoke.png
+            test -s CrediFlow-v0.9-build9-smoke.png
 
       - name: Upload smoke-test evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: CrediFlow-v0.8-smoke-evidence
+          name: CrediFlow-v0.9-build9-smoke-evidence
           path: |
-            CrediFlow-v0.8-smoke.png
+            CrediFlow-v0.9-build9-smoke.png
             launch.txt
             pid.txt
             activities.txt
