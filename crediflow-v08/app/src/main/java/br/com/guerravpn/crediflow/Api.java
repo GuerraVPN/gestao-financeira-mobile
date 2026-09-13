@@ -12,6 +12,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 final class Api {
@@ -64,9 +65,7 @@ final class Api {
     static Resp post(String path, JSONObject body, String token) throws Exception { return request("POST", path, body, token); }
     static Resp put(String path, JSONObject body, String token) throws Exception { return request("PUT", path, body, token); }
 
-    static Resp submitApplication(JSONObject form) throws Exception {
-        return post("/rest/v1/rpc/submit_credit_application", form, null);
-    }
+    static Resp submitApplication(JSONObject form) throws Exception { return post("/rest/v1/rpc/submit_credit_application", form, null); }
 
     static Resp checkApplication(String appId, String secret) throws Exception {
         JSONObject b = new JSONObject();
@@ -106,9 +105,7 @@ final class Api {
         return put("/auth/v1/user", b, accessToken);
     }
 
-    static Resp completeActivation(String accessToken) throws Exception {
-        return post("/functions/v1/complete-activation", new JSONObject(), accessToken);
-    }
+    static Resp completeActivation(String accessToken) throws Exception { return post("/functions/v1/complete-activation", new JSONObject(), accessToken); }
 
     static Resp clientLoanPreview(String accessToken, double amount, int installments, String firstDueDate) throws Exception {
         JSONObject b = new JSONObject();
@@ -118,9 +115,7 @@ final class Api {
         return post("/functions/v1/client-loan-preview", b, accessToken);
     }
 
-    static Resp clientLoanRequest(String accessToken, double amount, int installments,
-                                  String firstDueDate, String pixType, String pixKey,
-                                  String readingChoice) throws Exception {
+    static Resp clientLoanRequest(String accessToken, double amount, int installments, String firstDueDate, String pixType, String pixKey, String readingChoice) throws Exception {
         JSONObject b = new JSONObject();
         b.put("amount", amount);
         b.put("installments", installments);
@@ -132,9 +127,20 @@ final class Api {
         return post("/functions/v1/client-loan-request", b, accessToken);
     }
 
-    static Resp adminRecordReview(String accessToken, JSONObject body) throws Exception {
-        return post("/functions/v1/admin-record-review", body, accessToken);
+    static Resp clientEarlyPayoffInfo(String accessToken, String loanId) throws Exception {
+        return get("/functions/v1/client-early-payoff-info?loanId=" + URLEncoder.encode(loanId, "UTF-8"), accessToken);
     }
+
+    static Resp clientEarlyPayoffSubmit(String accessToken, String loanId, String fileName, String mimeType, byte[] bytes) throws Exception {
+        JSONObject b = new JSONObject();
+        b.put("loanId", loanId);
+        b.put("fileName", fileName);
+        b.put("mimeType", mimeType);
+        b.put("base64", Base64.encodeToString(bytes, Base64.NO_WRAP));
+        return post("/functions/v1/client-early-payoff-submit", b, accessToken);
+    }
+
+    static Resp adminRecordReview(String accessToken, JSONObject body) throws Exception { return post("/functions/v1/admin-record-review", body, accessToken); }
 
     static Resp adminSendActivation(String accessToken, String applicationId) throws Exception {
         JSONObject b = new JSONObject();
@@ -142,9 +148,7 @@ final class Api {
         return post("/functions/v1/admin-send-activation", b, accessToken);
     }
 
-    static Resp adminLoanRequests(String accessToken) throws Exception {
-        return get("/functions/v1/admin-loan-requests", accessToken);
-    }
+    static Resp adminLoanRequests(String accessToken) throws Exception { return get("/functions/v1/admin-loan-requests", accessToken); }
 
     static Resp adminConfirmDisbursement(String accessToken, String loanId, String note) throws Exception {
         JSONObject b = new JSONObject();
@@ -158,6 +162,16 @@ final class Api {
         b.put("loanId", loanId);
         b.put("note", note);
         return post("/functions/v1/admin-reject-loan-request", b, accessToken);
+    }
+
+    static Resp adminEarlyPayments(String accessToken) throws Exception { return get("/functions/v1/admin-early-payments", accessToken); }
+
+    static Resp adminReviewEarlyPayment(String accessToken, String requestId, String decision, String note) throws Exception {
+        JSONObject b = new JSONObject();
+        b.put("requestId", requestId);
+        b.put("decision", decision);
+        b.put("note", note == null ? "" : note);
+        return post("/functions/v1/admin-review-early-payment", b, accessToken);
     }
 
     private static String readAll(InputStream in) throws Exception {
