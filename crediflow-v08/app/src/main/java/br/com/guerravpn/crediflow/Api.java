@@ -1,5 +1,7 @@
 package br.com.guerravpn.crediflow;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.util.Base64;
 
 import org.json.JSONArray;
@@ -14,10 +16,22 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 
 final class Api {
     static final String BASE = "https://xvhbydoslqmnjjsnyvus.supabase.co";
     static final String KEY = "sb_publishable_uFIWm1dNBbbJqoxuy5aBLQ_QqtSJeya";
+
+    private static final Object REFRESH_LOCK = new Object();
+    private static volatile SharedPreferences prefs;
+    private static volatile String sessionAccess;
+    private static volatile String sessionRefresh;
+
+    static void init(Context context) {
+        prefs = context.getSharedPreferences("crediflow", Context.MODE_PRIVATE);
+        sessionAccess = prefs.getString("access_token", null);
+        sessionRefresh = prefs.getString("refresh_token", null);
+    }
 
     static final class Resp {
         final int code;
@@ -39,7 +53,7 @@ final class Api {
         }
     }
 
-    private static Resp request(String method, String path, JSONObject json, String token) throws Exception {
+    private static Resp rawRequest(String method, String path, JSONObject json, String token) throws Exception {
         URL url = new URL(BASE + path);
         HttpURLConnection c = (HttpURLConnection) url.openConnection();
         c.setRequestMethod(method);
@@ -59,6 +73,57 @@ final class Api {
         String body = readAll(in);
         c.disconnect();
         return new Resp(code, body);
+    }
+
+    private static Resp request(String method, String path, JSONObject json, String token) throws Exception {
+        String effectiveToken = token;
+        if (token != null && !token.isEmpty() && sessionAccess != null && !sessionAccess.isEmpty()) effectiveToken = sessionAccess;
+
+        Resp response = rawRequest(method, path, json, effectiveToken);
+        if (token != null && !token.isEmpty() && shouldRefresh(response)) {
+            if (refreshSession()) {
+                response = rawRequest(method, path, json, sessionAccess);
+            } else {
+                return new Resp(401, "{\"message\":\"Sua sessão expirou. Entre novamente.\"}");
+            }
+        }
+        return response;
+    }
+
+    private static boolean shouldRefresh(Resp response) {
+        if (response.code != 401) return false;
+        String body = response.body == null ? "" : response.body.toLowerCase(Locale.ROOT);
+        return body.contains("jwt") || body.contains("token") || body.contains("expired") || body.contains("unauthorized");
+    }
+
+    private static boolean refreshSession() {
+        synchronized (REFRESH_LOCK) {
+            if (sessionRefresh == null || sessionRefresh.isEmpty()) return false;
+            try {
+                JSONObject body = new JSONObject();
+                body.put("refresh_token", sessionRefresh);
+                Resp refreshed = rawRequest("POST", "/auth/v1/token?grant_type=refresh_token", body, null);
+                if (!refreshed.ok()) return false;
+                return captureSession(refreshed.object());
+            } catch (Exception ignored) {
+                return false;
+            }
+        }
+    }
+
+    private static boolean captureSession(JSONObject auth) {
+        String access = auth.optString("access_token", null);
+        String refresh = auth.optString("refresh_token", null);
+        if (access == null || access.isEmpty()) return false;
+        sessionAccess = access;
+        if (refresh != null && !refresh.isEmpty()) sessionRefresh = refresh;
+        SharedPreferences p = prefs;
+        if (p != null) {
+            SharedPreferences.Editor editor = p.edit().putString("access_token", sessionAccess);
+            if (sessionRefresh != null && !sessionRefresh.isEmpty()) editor.putString("refresh_token", sessionRefresh);
+            editor.apply();
+        }
+        return true;
     }
 
     static Resp get(String path, String token) throws Exception { return request("GET", path, null, token); }
@@ -88,7 +153,9 @@ final class Api {
         JSONObject b = new JSONObject();
         b.put("email", email);
         b.put("password", password);
-        return post("/auth/v1/token?grant_type=password", b, null);
+        Resp response = rawRequest("POST", "/auth/v1/token?grant_type=password", b, null);
+        if (response.ok()) captureSession(response.object());
+        return response;
     }
 
     static Resp verifyEmailOtp(String email, String token) throws Exception {
@@ -96,7 +163,9 @@ final class Api {
         b.put("email", email);
         b.put("token", token);
         b.put("type", "email");
-        return post("/auth/v1/verify", b, null);
+        Resp response = rawRequest("POST", "/auth/v1/verify", b, null);
+        if (response.ok()) captureSession(response.object());
+        return response;
     }
 
     static Resp updatePassword(String accessToken, String password) throws Exception {
